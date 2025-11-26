@@ -583,6 +583,14 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                     size_divisor = np.lcm.reduce([num_groups, ppo_mini_batch_size, n_gpus])
                     adjust_mode = getattr(self.config.agent_proxy, "batch_adjust_mode", "copy")
                     batch = adjust_batch(batch, size_divisor, mode=adjust_mode)
+
+                    # Record batch and mini-batch statistics
+                    batch_size = batch.batch["input_ids"].shape[0]
+                    num_mini_batches = batch_size // ppo_mini_batch_size
+                    metrics.update({
+                        "train/batch_size": batch_size,
+                        "train/num_mini_batches": num_mini_batches,
+                    })
                     metrics.update({"train/" + key: value for key, value in batch.meta_info["metrics"].items()})
 
                     inputs, outputs, scores = _process_batch_for_logging(batch)

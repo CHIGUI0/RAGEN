@@ -164,7 +164,12 @@ class RewardRolloutFilter(RolloutFilter):
 
             # Calculate group_size as episodes per group
             group_size = num_episodes // num_groups
-
+            
+            if num_episodes % num_groups != 0:
+                raise ValueError(
+                    f"Number of episodes ({num_episodes}) must be divisible by num_groups ({num_groups})"
+                )
+            
             # Reshape to (num_groups, group_size)
             rm_scores = episode_rewards.view(num_groups, group_size)
         else:
@@ -289,6 +294,11 @@ class EntropyRolloutFilter(RolloutFilter):
 
             # Calculate group_size as episodes per group
             group_size = num_episodes // num_groups
+
+            if num_episodes % num_groups != 0:
+                raise ValueError(
+                    f"Number of episodes ({num_episodes}) must be divisible by num_groups ({num_groups})"
+                )
 
             # Reshape to (num_groups, group_size)
             entropy_per_group = episode_entropy.view(num_groups, group_size)

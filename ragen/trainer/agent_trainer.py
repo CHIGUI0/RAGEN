@@ -53,6 +53,8 @@ from ragen.llm_agent.agent_proxy import LLMAgentProxy
 from ragen.utils import GenerationsLogger
 from ragen.trainer.rollout_filter import build_rollout_filter
 
+from tensordict import TensorDict
+
 
 def adjust_batch(batch: DataProto, size_divisor: int, mode: str = "copy") -> DataProto:
     """
@@ -99,14 +101,16 @@ def adjust_batch(batch: DataProto, size_divisor: int, mode: str = "copy") -> Dat
     elif mode == "copy":
         # Duplicate samples to make it divisible
         to_add = size_divisor - remainder
-        dup_indices = np.random.choice(bs, to_add, replace=False)
+        if to_add > bs:
+            dup_indices = np.random.choice(bs, to_add, replace=True)
+        else:
+            dup_indices = np.random.choice(bs, to_add, replace=False)
 
         # Create duplicated batch using TensorDict concat
         dup_indices_tensor = torch.tensor(dup_indices, dtype=torch.long)
         if batch.batch is not None:
             dup_tensor_data = batch.batch[dup_indices_tensor]
             # Use TensorDict's cat method
-            from tensordict import TensorDict
             tensor_data = TensorDict.cat([batch.batch, dup_tensor_data], dim=0)
         else:
             tensor_data = None

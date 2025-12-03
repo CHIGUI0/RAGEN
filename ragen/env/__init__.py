@@ -12,8 +12,6 @@ from .metamathqa.env import MetaMathQAEnv
 from .metamathqa.config import MetaMathQAEnvConfig
 from .lean.config import LeanEnvConfig
 from .lean.env import LeanEnv
-from .spatial.config import SpatialGymConfig
-from .spatial.env import SpatialGym
 from .sudoku.config import SudokuEnvConfig
 from .sudoku.env import SudokuEnv
 
@@ -26,7 +24,6 @@ REGISTERED_ENVS = {
     # 'alfworld': AlfredTXTEnv,
     'metamathqa': MetaMathQAEnv,
     'lean': LeanEnv,
-    'spatial': SpatialGym,
     'sudoku': SudokuEnv,
 }
 
@@ -38,7 +35,6 @@ REGISTERED_ENV_CONFIGS = {
     # 'alfworld': AlfredEnvConfig,
     'metamathqa': MetaMathQAEnvConfig,
     'lean': LeanEnvConfig,
-    'spatial': SpatialGymConfig,
     'sudoku': SudokuEnvConfig,
 }
 

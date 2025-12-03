@@ -219,15 +219,40 @@ custom_envs:
     max_workers: 32
     env_config: null # Please refer to ragen/env/lean/config.py for a full list of parameters.
 
-  Spatial:
-    env_type: spatial
-    max_actions_per_traj: 12
-    env_instruction: "You are a spatial reasoner. Explore the environment and answer the question."
-    max_tokens: 500
-    parallel_friendly: true
+  SimpleSudoku:
+    env_type: sudoku
+    max_actions_per_traj: 20
+    env_instruction: |
+      You are solving a Sudoku puzzle. Fill in the grid so that every row, column, and 3x3 box contains the numbers 1-9 without repetition.
+      Initial cells are shown in [brackets] and cannot be modified. Empty cells are shown as dots (.).
+      Place numbers one at a time using the format: <answer>place 5 at row 2 col 3</answer> or <answer>2,3,5</answer>
+      The environment will provide feedback on valid/invalid moves and show conflicts if any occur.
+    max_tokens: 150
+    parallel_friendly: false
     max_workers: 32
     env_config:
-      room_size: [20, 20]
-      level: 0
-      n_objects: 5
-      main: 6
+      grid_size: 9
+      difficulty: "easy"
+      render_format: "with_feedback"
+      show_conflicts: true
+      show_valid_numbers: true
+      max_steps: 81
+
+  MediumSudoku:
+    env_type: sudoku
+    max_actions_per_traj: 30
+    env_instruction: |
+      You are solving a Sudoku puzzle. Fill in the grid so that every row, column, and 3x3 box contains the numbers 1-9 without repetition.
+      Initial cells are shown in [brackets] and cannot be modified. Empty cells are shown as dots (.).
+      Place numbers one at a time using the format: <answer>place 5 at row 2 col 3</answer> or <answer>2,3,5</answer>
+      The environment will provide feedback on valid/invalid moves and show conflicts if any occur.
+    max_tokens: 150
+    parallel_friendly: false
+    max_workers: 32
+    env_config:
+      grid_size: 9
+      difficulty: "medium"
+      render_format: "with_feedback"
+      show_conflicts: true
+      show_valid_numbers: true
+      max_steps: 81

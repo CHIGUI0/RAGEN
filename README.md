@@ -129,6 +129,18 @@ bash scripts/setup_ragen.sh
 
 If this fails, you can follow the manual setup instructions in `scripts/setup_ragen.md`.
 
+### Optional Dependencies
+
+RAGEN supports optional environment-specific dependencies. You can install only the components you need:
+
+```bash
+pip install -e . # Base installation (core functionality only)
+pip install -e ".[webshop]" # Include WebShop environment dependencies
+pip install -e ".[lean]" # Include Lean environment dependencies
+pip install -e ".[all]" # Install all optional dependencies
+pip install -e ".[webshop,lean]" # Or combine multiple extras
+```
+
 ## Training Models
 Here's how to train models with RAGEN:
 
@@ -197,7 +209,7 @@ Please check the `val/generations` metric in your wandb dashboard to see the tra
 
 ## Performance
 
-We evaluate RAGEN across multiple environments. Below are results Qwen-2.5-0.5B-Instruct on Sokoban, Frozenlake, and Bandit. 
+We evaluate RAGEN across multiple environments. Below are results Qwen-2.5-0.5B-Instruct on Sokoban, Frozenlake, Bandit, and Spatial. 
 - No KL loss or KL penalty was applied during training
 - We selectively retained only the top 25% of trajectories that successfully completed their respective tasks
 

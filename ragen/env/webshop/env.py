@@ -30,6 +30,7 @@ class WebShopEnv(BaseLanguageBasedEnv, WebAgentTextEnv):
         self.human_goals = self.config.human_goals
         self.show_attrs = self.config.show_attrs
         self.render_cache = None
+        self.task_desc = None # Cache task description to avoid AttributeError during step
         if self.config.dataset:
             init_basedir(self.config.dataset)
 
@@ -118,6 +119,18 @@ class WebShopEnv(BaseLanguageBasedEnv, WebAgentTextEnv):
             
         # Call base reset. It returns (obs, info) from our modified webshop-minimal
         obs, _ = WebAgentTextEnv.reset(self, session=goal_idx)
+        
+        # Extract and cache task description exactly like verl-agent
+        parts = obs.split(" [SEP] ")
+        if len(parts) > 2 and parts[1].strip() == 'Instruction:':
+            self.task_desc = parts[2].strip()
+        else:
+            try:
+                self.task_desc = self.get_instruction_text().replace("Instruction:", "").strip()
+            except Exception:
+                # Fallback if parsing fails
+                self.task_desc = "Find products as requested."
+
         self.prepare_render_cache(obs)
         return self.render()
 
@@ -190,13 +203,18 @@ class WebShopEnv(BaseLanguageBasedEnv, WebAgentTextEnv):
         """
         available_actions = self.get_available_actions()
         
-        # Extract task exactly like verl-agent
-        parts = observation.split(" [SEP] ")
-        if len(parts) > 2 and parts[1].strip() == 'Instruction:':
-            task_desc = parts[2].strip()
-        else:
-            task_desc = self.get_instruction_text().replace("Instruction:", "").strip()
-
+        # Use cached task description
+        if self.task_desc is None:
+            parts = observation.split(" [SEP] ")
+            if len(parts) > 2 and parts[1].strip() == 'Instruction:':
+                self.task_desc = parts[2].strip()
+            else:
+                try:
+                    self.task_desc = self.get_instruction_text().replace("Instruction:", "").strip()
+                except Exception:
+                    self.task_desc = "Find products as requested."
+        
+        task_desc = self.task_desc
         formatted_obs = self.format_obs(observation)
         
         # Quote actions and add trailing commas to match verl-agent's EnvManager

@@ -610,6 +610,44 @@ class ContextManager:
         )
         return content
 
+    def _build_first_turn_prompt_and_reasoning_ids(
+        self,
+        env_output: Dict,
+        history: List[Dict],
+    ) -> Tuple[List[int], List[int]]:
+        messages = [
+            {"role": "system", "content": self._build_system_content(env_output["env_id"])},
+            {"role": "user", "content": ""},
+        ]
+        if history:
+            first_turn = history[0]
+            if "state" in first_turn:
+                messages[-1]["content"] += self._build_turn_state_content(
+                    first_turn, 1, env_output["env_id"]
+                )
+
+        prompt_text = self.tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, tokenize=False
+        )
+        if self.config.agent_proxy.enable_think:
+            prompt_text += "<think>"
+        prompt_ids = self.tokenizer(prompt_text, add_special_tokens=False)["input_ids"]
+
+        reasoning_text = ""
+        if self.config.agent_proxy.enable_think and history:
+            first_turn = history[0]
+            if "llm_response" in first_turn:
+                match = re.search(r"<think>(.*?)</think>", first_turn["llm_response"], re.DOTALL)
+                if match:
+                    reasoning_text = match.group(1)
+        for special_token in self.special_token_list:
+            reasoning_text = reasoning_text.replace(special_token, "")
+        reasoning_text = reasoning_text.strip()
+        if reasoning_text:
+            reasoning_text = f"{reasoning_text}</think>"
+        reasoning_ids = self.tokenizer(reasoning_text, add_special_tokens=False)["input_ids"]
+        return prompt_ids, reasoning_ids
+
     # ==================== Mask Computation ====================
 
     def _compute_loss_mask(
@@ -940,9 +978,16 @@ class ContextManager:
         """
         llm_input_texts = []
         messages_list = []
+        first_turn_prompt_ids_list = []
+        first_turn_reasoning_ids_list = []
 
         for env_output in env_outputs:
             history = self._extract_history(env_output, prepare_for_update=True)
+            first_prompt_ids, first_reasoning_ids = self._build_first_turn_prompt_and_reasoning_ids(
+                env_output, history
+            )
+            first_turn_prompt_ids_list.append(first_prompt_ids)
+            first_turn_reasoning_ids_list.append(first_reasoning_ids)
             messages = [
                 {"role": "system", "content": self._build_system_content(env_output["env_id"])},
                 {"role": "user", "content": ""}
@@ -999,6 +1044,8 @@ class ContextManager:
             "env_ids": np.array([env_output["env_id"] for env_output in env_outputs], dtype=int),
             "group_ids": np.array([env_output["group_id"] for env_output in env_outputs], dtype=int),
             "messages_list": np.array(messages_list, dtype=object),
+            "first_turn_prompt_ids": np.array(first_turn_prompt_ids_list, dtype=object),
+            "first_turn_reasoning_ids": np.array(first_turn_reasoning_ids_list, dtype=object),
         }
 
         llm_inputs.meta_info = {"metrics": self._compute_metrics(env_outputs, response_length)}

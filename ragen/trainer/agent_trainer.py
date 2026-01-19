@@ -52,6 +52,7 @@ from verl.utils.torch_functional import masked_mean
 from ragen.llm_agent.agent_proxy import LLMAgentProxy
 from ragen.utils import GenerationsLogger
 from ragen.trainer.rollout_filter import build_rollout_filter
+from ragen.trainer.collapse_metrics import CollapseDetector
 
 from tensordict import TensorDict
 
@@ -450,6 +451,16 @@ class RayAgentTrainer(VerlRayPPOTrainer):
             compute_log_prob=self.actor_rollout_wg.compute_log_prob,
         )
 
+        # create collapse detector
+        collapse_cfg = self.config.get("collapse_detection", {})
+        context_window_mode = getattr(self.config.agent_proxy, "context_window_mode", "full")
+        self.collapse_detector = CollapseDetector(
+            enabled=collapse_cfg.get("enabled", False),
+            compute_freq=collapse_cfg.get("compute_freq", 10),
+            micro_batch_size=collapse_cfg.get("micro_batch_size", 16),
+            context_window_mode=context_window_mode,
+        )
+
 
     def _save_checkpoint(self):
         """ 
@@ -581,8 +592,21 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                 with marked_timer("gen", timing_raw):
                     batch = self.agent_proxy.rollout(batch, val=False)
 
+                metrics = {}
+
+                # Compute collapse detection metrics before filtering (for fair comparison)
+                with marked_timer("collapse_metrics", timing_raw, color="cyan"):
+                    collapse_metrics = self.collapse_detector.compute_collapse_metrics(
+                        batch=batch,
+                        actor_compute_log_prob_fn=self.actor_rollout_wg.compute_log_prob,
+                        global_step=self.global_steps,
+                    )
+                    metrics.update(collapse_metrics)
+
+                with marked_timer("filter", timing_raw):
                     # Filter first, then adjust batch size
-                    batch, metrics = self.rollout_filter.filter(batch)
+                    batch, filter_metrics = self.rollout_filter.filter(batch)
+                    metrics.update(filter_metrics)
 
                     # Adjust batch size to be divisible by num_groups, ppo_mini_batch_size, and n_gpus
                     num_groups = self.config.es_manager.train.env_groups

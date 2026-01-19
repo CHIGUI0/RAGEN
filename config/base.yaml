@@ -119,6 +119,12 @@ agent_proxy:
     grouping: "state" # state / batch / inductive
     method: "identity" # asym_clip / identity / mean_std
 
+# Collapse detection for diagnosing template collapse vs entropy collapse
+collapse_detection:
+  enabled: false  # Disabled by default (expensive)
+  compute_freq: 1  # Compute every N steps
+  micro_batch_size: 32  # Micro batch size for cross-scoring
+
 es_manager:
   format_penalty: -0.1
   train:

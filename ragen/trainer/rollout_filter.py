@@ -20,7 +20,6 @@ class RolloutFilterConfig:
     group_size: int
     num_groups: int
     metric: str = "reward_variance"
-    lower_ratio: Optional[float] = None
     include_zero: bool = True
 
 
@@ -55,8 +54,7 @@ class RolloutFilter:
         indices = torch.arange(self.num_groups, device=scores.device)
 
         # Handle zero exclusion
-        # lower_ratio always excludes zero. include_zero can be set to False to exclude zeros generally.
-        if not self.config.include_zero or self.config.lower_ratio is not None:
+        if not self.config.include_zero:
             non_zero_mask = (torch.abs(scores) > 1e-10)
             scores = scores[non_zero_mask]
             indices = indices[non_zero_mask]
@@ -64,12 +62,7 @@ class RolloutFilter:
             if indices.numel() == 0:
                 return torch.tensor([], dtype=torch.long, device=scores.device)
 
-        # Handle lower_ratio selection
-        if self.config.lower_ratio is not None:
-            k = max(int(self.config.lower_ratio * indices.numel()), 1)
-            # topk with largest=False gives the smallest values
-            topk_res = scores.topk(k, largest=False)
-            return indices[topk_res.indices]
+        # Regular ratio logic
 
         # Regular ratio logic
         rollout_filter_ratio = self.ratio
@@ -222,7 +215,7 @@ class RewardRolloutFilter(RolloutFilter):
             }
         )
 
-        if rollout_filter_ratio >= 1 and self.config.lower_ratio is None:
+        if rollout_filter_ratio >= 1 and self.config.include_zero:
             return batch, metrics
 
         if has_episode_ids:
@@ -352,7 +345,7 @@ class EntropyRolloutFilter(RolloutFilter):
             }
         )
 
-        if rollout_filter_ratio >= 1 and self.config.lower_ratio is None:
+        if rollout_filter_ratio >= 1 and self.config.include_zero:
             return batch, metrics
 
         if has_episode_ids:
@@ -389,7 +382,6 @@ def build_rollout_filter(
     group_size: int,
     metric: Optional[str],
     compute_log_prob: Optional[Callable[[DataProto], DataProto]] = None,
-    lower_ratio: Optional[float] = None,
     include_zero: bool = True,
 ) -> RolloutFilter:
     metric = (metric or "reward_variance").lower()
@@ -404,7 +396,6 @@ def build_rollout_filter(
         num_groups=num_groups,
         group_size=group_size,
         metric=metric,
-        lower_ratio=lower_ratio,
         include_zero=include_zero,
     )
 

@@ -36,8 +36,8 @@ run_exps_for_algo() {
         
         # Fixed filtering parameters as requested
         filter_strategy="top_p"
-        filter_value=0.5
-        filter_suffix="topp50"
+        filter_value=0.9
+        filter_suffix="topp90"
         
         EXP_NAME="soko_3b_${alg_name}_${filter_suffix}_${scale_suffix}"
         
@@ -47,7 +47,7 @@ run_exps_for_algo() {
             echo "Running Experiment: $EXP_NAME (Filter: $filter_strategy $filter_value, Scaling: $scaling_strategy)"
             mkdir -p "${OUTPUT_DIR}/${EXP_NAME}"
             
-            WANDB=offline python train.py --config-name $ENV \
+            timeout 2h python train.py --config-name $ENV \
                 trainer.experiment_name="${EXP_NAME}" \
                 actor_rollout_ref.rollout.rollout_filter_strategy="${filter_strategy}" \
                 actor_rollout_ref.rollout.rollout_filter_value=${filter_value} \

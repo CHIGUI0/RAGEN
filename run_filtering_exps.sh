@@ -10,16 +10,15 @@ COMMON_FLAGS="trainer.total_training_steps=100 micro_batch_size_per_gpu=4 ppo_mi
     es_manager.train.env_groups=8 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[8]"
 
 ENV="_2_sokoban"
-OUTPUT_DIR="/mnt/permanent/xjin/20260119_sokoban_filters"
+OUTPUT_DIR="/mnt/permanent/xjin/20260120_sokoban_filters"
 
 mkdir -p $OUTPUT_DIR
 
 # Define configurations to iterate
 # Format: "strategy value suffix"
 CONFIGS=(
-    "top_p 0.5 topp50"
     "top_p 0.7 topp70"
-    "top_p 0.85 topp85"
+    "top_p 0.9 topp90"
     "min_p 0.5 minp50"
     "min_p 0.8 minp80"
     "top_k 4 topk4"
@@ -35,6 +34,11 @@ TYPES=(
 # Format: "bool suffix"
 INC_ZEROS=(
     "False noinc0"
+)
+
+# Format: "scaling suffix"
+LOSS_SCALES=(
+    "sqrt sqrtscale"
 )
 
 run_exps_for_algo() {
@@ -76,24 +80,29 @@ run_exps_for_algo() {
             for inc_str in "${INC_ZEROS[@]}"; do
                 read -r inc_bool inc_suffix <<< "$inc_str"
                 
-                EXP_NAME="soko_3b_${alg_name}_${stra_suffix}_${type_suffix}_${inc_suffix}"
-                if [ -f "${OUTPUT_DIR}/${EXP_NAME}/DONE" ]; then
-                    echo "Skipping ${EXP_NAME} (Already Done)"
-                else
-                    echo "Running Experiment: $EXP_NAME (Strategy: $strategy, Value: $value, Type: $ftype, IncludeZero: $inc_bool)"
+                for scale_str in "${LOSS_SCALES[@]}"; do
+                    read -r scaling scale_suffix <<< "$scale_str"
                     
-                    timeout 2h python train.py --config-name $ENV \
-                        trainer.experiment_name="${EXP_NAME}" \
-                        actor_rollout_ref.rollout.rollout_filter_strategy="${strategy}" \
-                        actor_rollout_ref.rollout.rollout_filter_value=${value} \
-                        actor_rollout_ref.rollout.rollout_filter_type="${ftype}" \
-                        actor_rollout_ref.rollout.rollout_filter_include_zero=${inc_bool} \
-                        $alg_flag \
-                        $COMMON_FLAGS \
-                        trainer.default_local_dir="${OUTPUT_DIR}/${EXP_NAME}"
-                    
-                    touch "${OUTPUT_DIR}/${EXP_NAME}/DONE"
-                fi
+                    EXP_NAME="soko_3b_${alg_name}_${stra_suffix}_${type_suffix}_${inc_suffix}_${scale_suffix}"
+                    if [ -f "${OUTPUT_DIR}/${EXP_NAME}/DONE" ]; then
+                        echo "Skipping ${EXP_NAME} (Already Done)"
+                    else
+                        echo "Running Experiment: $EXP_NAME (Strategy: $strategy, Value: $value, Type: $ftype, IncludeZero: $inc_bool, Scaling: $scaling)"
+                        
+                        timeout 1h python train.py --config-name $ENV \
+                            trainer.experiment_name="${EXP_NAME}" \
+                            actor_rollout_ref.rollout.rollout_filter_strategy="${strategy}" \
+                            actor_rollout_ref.rollout.rollout_filter_value=${value} \
+                            actor_rollout_ref.rollout.rollout_filter_type="${ftype}" \
+                            actor_rollout_ref.rollout.rollout_filter_include_zero=${inc_bool} \
+                            actor_rollout_ref.actor.filter_loss_scaling="${scaling}" \
+                            $alg_flag \
+                            $COMMON_FLAGS \
+                            trainer.default_local_dir="${OUTPUT_DIR}/${EXP_NAME}"
+                        
+                        touch "${OUTPUT_DIR}/${EXP_NAME}/DONE"
+                    fi
+                done
             done
         done
     done

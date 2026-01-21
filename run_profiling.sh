@@ -53,9 +53,11 @@ run_experiment() {
     TRAIN_TIME_RAW=$(grep -oP 'timing_s/train_total[:\s]+\K[\d.]+' "logs/${name}.log" | tail -1 || echo "")
     EVAL_TIME_RAW=$(grep -oP 'timing_s/eval_total[:\s]+\K[\d.]+' "logs/${name}.log" | tail -1 || echo "")
     TOTAL_TIME_RAW=$(grep -oP 'timing_s/total[:\s]+\K[\d.]+' "logs/${name}.log" | tail -1 || echo "")
+    COLLAPSE_TIME_RAW=$(grep -oP 'timing_s/collapse_total[:\s]+\K[\d.]+' "logs/${name}.log" | tail -1 || echo "")
     TRAIN_TIME=$([ -n "$TRAIN_TIME_RAW" ] && printf "%.2f" "$TRAIN_TIME_RAW" || echo "N/A")
     EVAL_TIME=$([ -n "$EVAL_TIME_RAW" ] && printf "%.2f" "$EVAL_TIME_RAW" || echo "N/A")
     TOTAL_TIME_METRIC=$([ -n "$TOTAL_TIME_RAW" ] && printf "%.2f" "$TOTAL_TIME_RAW" || echo "N/A")
+    COLLAPSE_TIME=$([ -n "$COLLAPSE_TIME_RAW" ] && printf "%.2f" "$COLLAPSE_TIME_RAW" || echo "N/A")
 
     if [ $EXIT_CODE -eq 0 ]; then
         STATUS="success"
@@ -65,7 +67,7 @@ run_experiment() {
     fi
 
     # Update log with results
-    echo "task=${task} | algo=${algo} | filter=${filter} | model=${MODEL_SIZE} | thinking=${think_label} | steps=${STEPS} | train_time=${TRAIN_TIME}s | eval_time=${EVAL_TIME}s | total_time=${TOTAL_TIME_METRIC}s | wall_time=${TOTAL_TIME}s | gpu=1xB200 | status=${STATUS}" | tee -a $LOG_FILE
+    echo "task=${task} | algo=${algo} | filter=${filter} | model=${MODEL_SIZE} | thinking=${think_label} | steps=${STEPS} | train_time=${TRAIN_TIME}s | eval_time=${EVAL_TIME}s | collapse_time=${COLLAPSE_TIME}s | total_time=${TOTAL_TIME_METRIC}s | wall_time=${TOTAL_TIME}s | gpu=1xB200 | status=${STATUS}" | tee -a $LOG_FILE
     [ "$STATUS" = "fail" ] && echo "  error: ${ERROR}" | tee -a $LOG_FILE
 }
 

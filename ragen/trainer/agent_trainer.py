@@ -453,15 +453,29 @@ class RayAgentTrainer(VerlRayPPOTrainer):
 
         # create collapse detector
         collapse_cfg = self.config.get("collapse_detection", {})
-        multi_turn_cfg = collapse_cfg.get("multi_turn_sampling", {})
         context_window_mode = getattr(self.config.agent_proxy, "context_window_mode", "full")
+        # num_samples: int for specific count, "all" for using all samples
+        num_samples_cfg = collapse_cfg.get("num_samples", "all")
+        if num_samples_cfg is None:
+            raise ValueError("collapse_detection.num_samples must be an int or 'all'")
+        if isinstance(num_samples_cfg, str):
+            if num_samples_cfg.lower() != "all":
+                raise ValueError("collapse_detection.num_samples must be an int or 'all'")
+            num_samples = None
+        else:
+            try:
+                num_samples = int(num_samples_cfg)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("collapse_detection.num_samples must be an int or 'all'") from exc
+            if num_samples <= 0:
+                raise ValueError("collapse_detection.num_samples must be a positive int or 'all'")
         self.collapse_detector = CollapseDetector(
-            enabled=collapse_cfg.get("enabled", False),
             compute_freq=collapse_cfg.get("compute_freq", 10),
             micro_batch_size=collapse_cfg.get("micro_batch_size", 16),
             context_window_mode=context_window_mode,
-            multi_turn_enabled=multi_turn_cfg.get("enabled", True),
-            num_samples=multi_turn_cfg.get("num_samples"),
+            multi_turn_enabled=collapse_cfg.get("multi_turn_enabled", False),
+            first_turn_enabled=collapse_cfg.get("first_turn_enabled", False),
+            num_samples=num_samples,
             std_eps=collapse_cfg.get("std_eps", 1e-3),
             ema_decay=collapse_cfg.get("ema_decay", 0.9),
         )
@@ -585,6 +599,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
         self.start_time = time.time()
         self.train_time_total = 0.0
         self.eval_time_total = 0.0
+        self.collapse_time_total = 0.0
         for step in range(self.total_training_steps):
             # metrics = {}
             timing_raw = {}
@@ -595,6 +610,10 @@ class RayAgentTrainer(VerlRayPPOTrainer):
             with marked_timer("step", timing_raw):
                 # generate a batch
                 with marked_timer("gen", timing_raw):
+                    batch.meta_info = batch.meta_info or {}
+                    batch.meta_info["compute_collapse"] = self.collapse_detector.should_compute(
+                        self.global_steps
+                    )
                     batch = self.agent_proxy.rollout(batch, val=False)
 
                 metrics = {}
@@ -811,12 +830,14 @@ class RayAgentTrainer(VerlRayPPOTrainer):
 
             eval_time = timing_raw.get("testing", 0.0)
             save_time = timing_raw.get("save_checkpoint", 0.0)
+            collapse_time = timing_raw.get("collapse_metrics", 0.0)
             step_time = timing_raw.get("step", 0.0)
-            train_time = step_time - eval_time - save_time
+            train_time = step_time - eval_time - save_time - collapse_time
             if train_time < 0:
                 train_time = 0.0
             self.train_time_total += train_time
             self.eval_time_total += eval_time
+            self.collapse_time_total += collapse_time
 
             # collect metrics
             metrics.update(compute_data_metrics(batch=batch, use_critic=self.use_critic))
@@ -830,6 +851,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                 "timing_s/eval_step": eval_time,
                 "timing_s/train_total": self.train_time_total,
                 "timing_s/eval_total": self.eval_time_total,
+                "timing_s/collapse_total": self.collapse_time_total,
             })
             # add another timing metric: total time
             metrics.update({"timing_s/total": time.time() - self.start_time})

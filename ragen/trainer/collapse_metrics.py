@@ -32,34 +32,33 @@ class CollapseDetector:
 
     def __init__(
         self,
-        enabled: bool = False,
         compute_freq: int = 10,
         micro_batch_size: int = 16,
         context_window_mode: str = "full",
-        multi_turn_enabled: bool = True,
+        multi_turn_enabled: bool = False,
+        first_turn_enabled: bool = False,
         num_samples: Optional[int] = None,
         std_eps: float = 1e-3,
         ema_decay: float = 0.9,
     ):
-        
         """
         Initialize the collapse detector.
 
         Args:
-            enabled: Whether collapse detection is enabled
             compute_freq: Compute metrics every N steps
             micro_batch_size: Micro batch size for cross-scoring
             context_window_mode: Context window mode ("full", "single_turn", "limited_multi_turn")
             multi_turn_enabled: Whether to use multi-turn sampling for MI computation
+            first_turn_enabled: Whether to compute first-turn metrics
             num_samples: Number of (x,r) pairs to sample (None = use all)
             std_eps: Small constant for std normalization stability
             ema_decay: EMA decay for cross-time std tracking
         """
-        self.enabled = enabled
         self.compute_freq = compute_freq
         self.micro_batch_size = micro_batch_size
         self.context_window_mode = context_window_mode
         self.multi_turn_enabled = multi_turn_enabled
+        self.first_turn_enabled = first_turn_enabled
         self.num_samples = num_samples
         self.std_eps = std_eps
         self.ema_decay = ema_decay
@@ -83,13 +82,7 @@ class CollapseDetector:
         Returns:
             Dictionary of collapse metrics (empty if not enabled or not the right step)
         """
-        if not self.enabled:
-            return {}
-
-        # Always compute on step 1, then every compute_freq steps.
-        if global_step == 0:
-            return {}
-        if global_step != 1 and global_step % self.compute_freq != 0:
+        if not self.should_compute(global_step):
             return {}
 
         # Only compute collapse metrics when context_window_mode='full'
@@ -176,29 +169,55 @@ class CollapseDetector:
                 traj_group_ids,
             )
 
-        # First-turn sampling: always compute when data is available.
-        first_turn_prompt_ids = batch.non_tensor_batch.get("first_turn_prompt_ids")
-        first_turn_reasoning_ids = batch.non_tensor_batch.get("first_turn_reasoning_ids")
-        if first_turn_prompt_ids is None or first_turn_reasoning_ids is None:
-            if not metrics:
-                raise ValueError(
-                    "Collapse metrics require first_turn_prompt_ids and first_turn_reasoning_ids."
-                )
-            return metrics
+        if self.first_turn_enabled:
+            # First-turn sampling: always compute when data is available.
+            first_turn_prompt_ids = batch.non_tensor_batch.get("first_turn_prompt_ids")
+            first_turn_reasoning_ids = batch.non_tensor_batch.get("first_turn_reasoning_ids")
+            if first_turn_prompt_ids is None or first_turn_reasoning_ids is None:
+                if not metrics:
+                    raise ValueError(
+                        "Collapse metrics require first_turn_prompt_ids and first_turn_reasoning_ids."
+                    )
+                return metrics
 
-        first_prompt_ids, first_reasoning_ids, first_group_ids = self._sample_first_turn_pairs(
-            first_turn_prompt_ids,
-            first_turn_reasoning_ids,
-            group_ids,
-        )
-        _safe_compute(
-            "collapse_first_turn_sample",
-            first_prompt_ids,
-            first_reasoning_ids,
-            first_group_ids,
-        )
+            first_turn_reasoning_list = (
+                list(first_turn_reasoning_ids)
+                if isinstance(first_turn_reasoning_ids, np.ndarray)
+                else first_turn_reasoning_ids
+            )
+            first_turn_valid_indices = self._get_valid_reasoning_indices(first_turn_reasoning_list)
+            first_turn_total = len(first_turn_reasoning_list)
+            first_turn_valid = len(first_turn_valid_indices)
+            metrics["collapse/first_turn_num_total"] = first_turn_total
+            metrics["collapse/first_turn_num_valid"] = first_turn_valid
+            metrics["collapse/first_turn_valid_rate"] = (
+                (first_turn_valid / first_turn_total) if first_turn_total > 0 else 0.0
+            )
+
+            first_prompt_ids, first_reasoning_ids, first_group_ids = self._sample_first_turn_pairs(
+                first_turn_prompt_ids,
+                first_turn_reasoning_ids,
+                group_ids,
+            )
+            _safe_compute(
+                "collapse_first_turn_sample",
+                first_prompt_ids,
+                first_reasoning_ids,
+                first_group_ids,
+            )
 
         return metrics
+
+    def should_compute(self, global_step: int) -> bool:
+        # Enabled if either first_turn or multi_turn is enabled
+        if not (self.first_turn_enabled or self.multi_turn_enabled):
+            return False
+        # Always compute on step 1, then every compute_freq steps.
+        if global_step == 0:
+            return False
+        if global_step == 1:
+            return True
+        return global_step % self.compute_freq == 0
 
     def _compute_metrics_for_pairs(
         self,
@@ -211,6 +230,7 @@ class CollapseDetector:
     ) -> Dict[str, float]:
         # Build mapping from group_id to column index
         unique_groups = np.unique(group_ids)
+        
         gid_to_col = {int(gid): j for j, gid in enumerate(unique_groups)}
 
         N_prompts = len(unique_groups)
@@ -681,8 +701,25 @@ class CollapseDetector:
         if isinstance(group_ids, list):
             group_ids = np.array(group_ids)
 
+        valid_indices = self._get_valid_reasoning_indices(first_turn_reasoning_ids)
+
+        if not valid_indices:
+            return [], [], np.array([], dtype=int)
+
+        # Sample if num_samples is specified and smaller than total valid
+        if self.num_samples is not None and self.num_samples < len(valid_indices):
+            selected = list(np.random.choice(valid_indices, self.num_samples, replace=False))
+        else:
+            selected = valid_indices
+
+        sampled_prompt_ids = [first_turn_prompt_ids[i] for i in selected]
+        sampled_reasoning_ids = [first_turn_reasoning_ids[i] for i in selected]
+        sampled_group_ids = group_ids[selected]
+        return sampled_prompt_ids, sampled_reasoning_ids, sampled_group_ids
+
+    def _get_valid_reasoning_indices(self, reasoning_ids_list: List) -> List[int]:
         valid_indices = []
-        for idx, tokens in enumerate(first_turn_reasoning_ids):
+        for idx, tokens in enumerate(reasoning_ids_list):
             if torch.is_tensor(tokens):
                 token_count = int(tokens.numel())
             else:
@@ -691,24 +728,7 @@ class CollapseDetector:
                 token_count = len(tokens)
             if token_count > 0:
                 valid_indices.append(idx)
-
-        if not valid_indices:
-            return [], [], np.array([], dtype=int)
-
-        total_pairs = len(valid_indices)
-        if total_pairs == 0:
-            return [], [], np.array([], dtype=int)
-
-        if self.num_samples is not None and self.num_samples < total_pairs:
-            indices = np.random.choice(total_pairs, self.num_samples, replace=False)
-        else:
-            indices = np.arange(total_pairs)
-
-        selected = [valid_indices[i] for i in indices]
-        sampled_prompt_ids = [first_turn_prompt_ids[i] for i in selected]
-        sampled_reasoning_ids = [first_turn_reasoning_ids[i] for i in selected]
-        sampled_group_ids = group_ids[selected]
-        return sampled_prompt_ids, sampled_reasoning_ids, sampled_group_ids
+        return valid_indices
 
     def _sample_turn_uniform(
         self,

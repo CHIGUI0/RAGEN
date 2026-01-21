@@ -1073,38 +1073,51 @@ class ContextManager:
         llm_inputs.meta_info = {"metrics": self._compute_metrics(env_outputs, response_length)}
         return llm_inputs
 
-    def _build_samples_full(self, env_outputs: List[Dict]) -> DataProto:
+    def _build_samples_full(
+        self, env_outputs: List[Dict], include_collapse_data: bool = True
+    ) -> DataProto:
         """
         Build full multi-turn samples for update (original behavior).
         All assistant turns are trained.
         """
         llm_input_texts = []
         messages_list = []
-        first_turn_prompt_ids_list = []
-        first_turn_reasoning_ids_list = []
+        collapse_cfg = getattr(self.config, "collapse_detection", None)
+        first_turn_enabled = bool(getattr(collapse_cfg, "first_turn_enabled", False)) if collapse_cfg else False
+        multi_turn_enabled = bool(getattr(collapse_cfg, "multi_turn_enabled", False)) if collapse_cfg else False
+        collapse_enabled = first_turn_enabled or multi_turn_enabled
+
+        include_collapse_data = include_collapse_data and collapse_enabled
+        include_first_turn = include_collapse_data and first_turn_enabled
+        include_all_turns = include_collapse_data and multi_turn_enabled
+
+        first_turn_prompt_ids_list = [] if include_first_turn else None
+        first_turn_reasoning_ids_list = [] if include_first_turn else None
         # Multi-turn data for collapse detection
-        all_turns_prompt_ids_list = []
-        all_turns_reasoning_ids_list = []
-        turn_counts_list = []
-        turn_counts_total_list = []
+        all_turns_prompt_ids_list = [] if include_all_turns else None
+        all_turns_reasoning_ids_list = [] if include_all_turns else None
+        turn_counts_list = [] if include_all_turns else None
+        turn_counts_total_list = [] if include_all_turns else None
 
         for env_output in env_outputs:
             history = self._extract_history(env_output, prepare_for_update=True)
-            first_prompt_ids, first_reasoning_ids = self._build_first_turn_prompt_and_reasoning_ids(
-                env_output, history
-            )
-            first_turn_prompt_ids_list.append(first_prompt_ids)
-            first_turn_reasoning_ids_list.append(first_reasoning_ids)
+            if include_first_turn:
+                first_prompt_ids, first_reasoning_ids = self._build_first_turn_prompt_and_reasoning_ids(
+                    env_output, history
+                )
+                first_turn_prompt_ids_list.append(first_prompt_ids)
+                first_turn_reasoning_ids_list.append(first_reasoning_ids)
 
             # Build multi-turn prompt/reasoning for collapse detection
-            all_prompt_ids, all_reasoning_ids = self._build_all_turns_prompt_and_reasoning_ids(
-                env_output, history
-            )
-            all_turns_prompt_ids_list.append(all_prompt_ids)
-            all_turns_reasoning_ids_list.append(all_reasoning_ids)
-            turn_counts_list.append(len(all_prompt_ids))
-            total_turns = sum(1 for turn in history if "llm_response" in turn)
-            turn_counts_total_list.append(total_turns)
+            if include_all_turns:
+                all_prompt_ids, all_reasoning_ids = self._build_all_turns_prompt_and_reasoning_ids(
+                    env_output, history
+                )
+                all_turns_prompt_ids_list.append(all_prompt_ids)
+                all_turns_reasoning_ids_list.append(all_reasoning_ids)
+                turn_counts_list.append(len(all_prompt_ids))
+                total_turns = sum(1 for turn in history if "llm_response" in turn)
+                turn_counts_total_list.append(total_turns)
             messages = [
                 {"role": "system", "content": self._build_system_content(env_output["env_id"])},
                 {"role": "user", "content": ""}
@@ -1161,14 +1174,27 @@ class ContextManager:
             "env_ids": np.array([env_output["env_id"] for env_output in env_outputs], dtype=int),
             "group_ids": np.array([env_output["group_id"] for env_output in env_outputs], dtype=int),
             "messages_list": np.array(messages_list, dtype=object),
-            "first_turn_prompt_ids": np.array(first_turn_prompt_ids_list, dtype=object),
-            "first_turn_reasoning_ids": np.array(first_turn_reasoning_ids_list, dtype=object),
-            # Multi-turn data for collapse detection
-            "all_turns_prompt_ids": np.array(all_turns_prompt_ids_list, dtype=object),
-            "all_turns_reasoning_ids": np.array(all_turns_reasoning_ids_list, dtype=object),
-            "turn_counts": np.array(turn_counts_list, dtype=int),
-            "turn_counts_total": np.array(turn_counts_total_list, dtype=int),
         }
+        if include_first_turn:
+            llm_inputs.non_tensor_batch["first_turn_prompt_ids"] = np.array(
+                first_turn_prompt_ids_list, dtype=object
+            )
+            llm_inputs.non_tensor_batch["first_turn_reasoning_ids"] = np.array(
+                first_turn_reasoning_ids_list, dtype=object
+            )
+        if include_all_turns:
+            llm_inputs.non_tensor_batch["all_turns_prompt_ids"] = np.array(
+                all_turns_prompt_ids_list, dtype=object
+            )
+            llm_inputs.non_tensor_batch["all_turns_reasoning_ids"] = np.array(
+                all_turns_reasoning_ids_list, dtype=object
+            )
+            llm_inputs.non_tensor_batch["turn_counts"] = np.array(
+                turn_counts_list, dtype=int
+            )
+            llm_inputs.non_tensor_batch["turn_counts_total"] = np.array(
+                turn_counts_total_list, dtype=int
+            )
 
         llm_inputs.meta_info = {"metrics": self._compute_metrics(env_outputs, response_length)}
         return llm_inputs
@@ -1297,7 +1323,12 @@ class ContextManager:
 
         return messages
 
-    def get_lm_inputs(self, env_outputs: List[Dict], prepare_for_update: bool) -> DataProto:
+    def get_lm_inputs(
+        self,
+        env_outputs: List[Dict],
+        prepare_for_update: bool,
+        include_collapse_data: bool = True,
+    ) -> DataProto:
         """
         Main entry point for building LLM inputs.
 
@@ -1317,7 +1348,9 @@ class ContextManager:
             elif context_window_mode == "limited_multi_turn":
                 return self._build_limited_multi_turn_samples(env_outputs)
             else:  # full
-                return self._build_samples_full(env_outputs)
+                return self._build_samples_full(
+                    env_outputs, include_collapse_data=include_collapse_data
+                )
         else:
             # Inference: build prompts for generation
             return self._build_infer_samples(env_outputs)
@@ -1344,8 +1377,12 @@ class ContextManager:
             })
         return env_inputs
 
-    def formulate_rollouts(self, env_outputs: List[Dict]) -> DataProto:
-        llm_inputs = self.get_lm_inputs(env_outputs, prepare_for_update=True)
+    def formulate_rollouts(
+        self, env_outputs: List[Dict], include_collapse_data: bool = True
+    ) -> DataProto:
+        llm_inputs = self.get_lm_inputs(
+            env_outputs, prepare_for_update=True, include_collapse_data=include_collapse_data
+        )
         return llm_inputs
 
 

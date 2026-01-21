@@ -257,7 +257,12 @@ class LLMAgentProxy:
             last_inputs.meta_info["mode"] = "multiturn-end"
             self.generate_sequences(last_inputs)
         rollout_states = es_manager.get_rollout_states()
-        rollouts = ctx_manager.formulate_rollouts(rollout_states)
+        include_collapse_data = True
+        if dataproto.meta_info is not None:
+            include_collapse_data = dataproto.meta_info.get("compute_collapse", True)
+        rollouts = ctx_manager.formulate_rollouts(
+            rollout_states, include_collapse_data=include_collapse_data
+        )
 
         # calculate instance-level entropy
         if "entropys" in rollouts.non_tensor_batch:

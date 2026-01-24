@@ -326,7 +326,8 @@ class EntropyRolloutFilter(RolloutFilter):
 
         if "entropys" not in batch.batch:
             log_prob = self._compute_log_prob(batch)
-            batch = batch.union(log_prob)
+            # Only keep entropys to avoid conflicts with later logprob recomputation in agent_trainer.py
+            batch.batch["entropys"] = log_prob.batch["entropys"]
 
         entropys = batch.batch["entropys"]
         loss_mask = batch.batch.get("loss_mask")

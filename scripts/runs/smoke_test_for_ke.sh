@@ -6,7 +6,7 @@
 # Group 3: KL=0 and Entropy=0 (4 filter ratios = 4 runs)
 # Group 4: Task-agnostic KL x Entropy (1 filter ratio × 4 KL × 4 entropy = 16 runs)
 # Group 5: No filter, KL x Entropy (1 filter ratio × 4 KL × 4 entropy = 16 runs)
-# Sync wandb: wandb sync wandb/offline-run-*
+# Sync wandb: wandb sync wandb/offline-run-* (per-batch diff)
 
 export RAY_TMPDIR=/dev/shm/ray
 
@@ -87,8 +87,6 @@ done
 GROUP_SET="${GROUP_SET//[[:space:]]/}"
 KL_LOSS_TYPE="${KL_LOSS_TYPE//[[:space:]]/}"
 
-LOG_FILE="${LOG_BASE}_${KL_LOSS_TYPE}.log"
-
 IFS=',' read -r -a GROUP_LIST <<< "$GROUP_SET"
 
 has_group() {
@@ -102,10 +100,21 @@ has_group() {
     return 1
 }
 
-# Collapse detection settings
-COLLAPSE_FIRST_TURN=true
-COLLAPSE_MULTI_TURN=false
-COLLAPSE_NUM_SAMPLES="all"
+# Collapse detection settings (multi-turn only)
+COLLAPSE_FIRST_TURN=false
+COLLAPSE_MULTI_TURN=true
+COLLAPSE_NUM_SAMPLES=64
+if [ "$COLLAPSE_FIRST_TURN" = true ] && [ "$COLLAPSE_MULTI_TURN" = true ]; then
+    COLLAPSE_TAG="ftmt"
+elif [ "$COLLAPSE_FIRST_TURN" = true ] && [ "$COLLAPSE_MULTI_TURN" = false ]; then
+    COLLAPSE_TAG="ft"
+elif [ "$COLLAPSE_FIRST_TURN" = false ] && [ "$COLLAPSE_MULTI_TURN" = true ]; then
+    COLLAPSE_TAG="mt"
+else
+    COLLAPSE_TAG="nocd"
+fi
+
+LOG_FILE="${LOG_BASE}_${KL_LOSS_TYPE}_${COLLAPSE_TAG}.log"
 
 if [ ! -f "$LOG_FILE" ]; then
     echo "=== Smoke Test for $MODEL_SIZE on B200: $(date) ===" | tee "$LOG_FILE"
@@ -224,6 +233,46 @@ already_done() {
 MAX_PARALLEL=8
 batch_count=0
 batch_pids=()
+SYNC_WANDB_EVERY_BATCH=true
+WANDB_OFFLINE_DIR="wandb"
+WANDB_OFFLINE_GLOB="${WANDB_OFFLINE_DIR}/offline-run-*"
+BATCH_BASELINE_FILE=""
+
+list_offline_runs() {
+    ls -d ${WANDB_OFFLINE_GLOB} 2>/dev/null | sort
+}
+
+init_batch_baseline() {
+    if [ -n "$BATCH_BASELINE_FILE" ] && [ -f "$BATCH_BASELINE_FILE" ]; then
+        rm -f "$BATCH_BASELINE_FILE"
+    fi
+    BATCH_BASELINE_FILE=$(mktemp)
+    list_offline_runs > "$BATCH_BASELINE_FILE"
+}
+
+sync_wandb_batch() {
+    if [ -z "$BATCH_BASELINE_FILE" ] || [ ! -f "$BATCH_BASELINE_FILE" ]; then
+        echo "W&B sync skipped (no baseline for this batch)" | tee -a "$LOG_FILE"
+        return 0
+    fi
+
+    local after_file
+    after_file=$(mktemp)
+    list_offline_runs > "$after_file"
+
+    mapfile -t new_runs < <(comm -13 "$BATCH_BASELINE_FILE" "$after_file")
+
+    rm -f "$after_file" "$BATCH_BASELINE_FILE"
+    BATCH_BASELINE_FILE=""
+
+    if [ ${#new_runs[@]} -eq 0 ]; then
+        echo "W&B sync: no new offline runs in this batch." | tee -a "$LOG_FILE"
+        return 0
+    fi
+
+    echo "W&B sync: ${#new_runs[@]} runs" | tee -a "$LOG_FILE"
+    wandb sync "${new_runs[@]}" 2>&1 | tee -a "$LOG_FILE"
+}
 
 wait_batch() {
     if [ $batch_count -eq 0 ]; then
@@ -234,6 +283,9 @@ wait_batch() {
     done
     batch_pids=()
     batch_count=0
+    if [ "$SYNC_WANDB_EVERY_BATCH" = true ]; then
+        sync_wandb_batch
+    fi
     sleep 30
 }
 
@@ -249,6 +301,10 @@ start_job() {
     if already_done "$name"; then
         echo "Skipping: ${name} (already logged: ${SKIP_STATUSES[*]})" | tee -a "$LOG_FILE"
         return 0
+    fi
+
+    if [ $batch_count -eq 0 ]; then
+        init_batch_baseline
     fi
 
     gpu_id=${GPUS[$batch_count]}
@@ -272,7 +328,7 @@ if has_group 1; then
         filter_name=${FILTER_NAMES[$i]}
         for kl_coef in "${KL_COEFFS[@]}"; do
             kl_name=$(echo $kl_coef | sed 's/\.//g')
-            exp_name="g1-smoke-ppo-sokoban-${filter_name}-kl${kl_name}-ent0-${KL_LOSS_TYPE}"
+            exp_name="g1-smoke-ppo-sokoban-${filter_name}-kl${kl_name}-ent0-${KL_LOSS_TYPE}-${COLLAPSE_TAG}"
             start_job "$exp_name" "$filter_ratio" "$kl_coef" "0" "False" "$KL_LOSS_TYPE"
         done
     done
@@ -291,7 +347,7 @@ if has_group 2; then
         filter_name=${FILTER_NAMES[$i]}
         for entropy_coef in "${ENTROPY_COEFFS[@]}"; do
             ent_name=$(echo $entropy_coef | sed 's/\.//g')
-            exp_name="g2-smoke-ppo-sokoban-${filter_name}-kl0-ent${ent_name}-${KL_LOSS_TYPE}"
+            exp_name="g2-smoke-ppo-sokoban-${filter_name}-kl0-ent${ent_name}-${KL_LOSS_TYPE}-${COLLAPSE_TAG}"
             start_job "$exp_name" "$filter_ratio" "0" "$entropy_coef" "False" "$KL_LOSS_TYPE"
         done
     done
@@ -307,7 +363,7 @@ if has_group 3; then
     for i in "${!FILTER_RATIOS[@]}"; do
         filter_ratio=${FILTER_RATIOS[$i]}
         filter_name=${FILTER_NAMES[$i]}
-        exp_name="g3-smoke-ppo-sokoban-${filter_name}-kl0-ent0-${KL_LOSS_TYPE}"
+        exp_name="g3-smoke-ppo-sokoban-${filter_name}-kl0-ent0-${KL_LOSS_TYPE}-${COLLAPSE_TAG}"
         start_job "$exp_name" "$filter_ratio" "0" "0" "False" "$KL_LOSS_TYPE"
     done
 
@@ -328,7 +384,7 @@ if has_group 4; then
             kl_name=$(echo $kl_coef | sed 's/\.//g')
             for entropy_coef in "${ENTROPY_COEFFS[@]}"; do
                 ent_name=$(echo $entropy_coef | sed 's/\.//g')
-                exp_name="g4-smoke-ppo-sokoban-ta-${filter_name}-kl${kl_name}-ent${ent_name}-${KL_LOSS_TYPE}"
+                exp_name="g4-smoke-ppo-sokoban-ta-${filter_name}-kl${kl_name}-ent${ent_name}-${KL_LOSS_TYPE}-${COLLAPSE_TAG}"
                 start_job "$exp_name" "$filter_ratio" "$kl_coef" "$entropy_coef" "True" "$KL_LOSS_TYPE"
             done
         done
@@ -351,7 +407,7 @@ if has_group 5; then
         kl_name=$(echo $kl_coef | sed 's/\.//g')
         for entropy_coef in "${ENTROPY_COEFFS[@]}"; do
             ent_name=$(echo $entropy_coef | sed 's/\.//g')
-            exp_name="g5-smoke-ppo-sokoban-${NOFILTER_NAME}-kl${kl_name}-ent${ent_name}-${KL_LOSS_TYPE}"
+            exp_name="g5-smoke-ppo-sokoban-${NOFILTER_NAME}-kl${kl_name}-ent${ent_name}-${KL_LOSS_TYPE}-${COLLAPSE_TAG}"
             start_job "$exp_name" "$NOFILTER_RATIO" "$kl_coef" "$entropy_coef" "False" "$KL_LOSS_TYPE"
         done
     done

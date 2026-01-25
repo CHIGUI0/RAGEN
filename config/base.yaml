@@ -38,6 +38,8 @@ actor_rollout_ref:
     clip_ratio_high: 0.28
     grpo_advantage_length_weight: ${grpo_advantage_length_weight}
     filter_loss_scaling: "none" # "none", "linear", "sqrt"
+    # Loss aggregation mode: "token-mean" (default), "seq-mean-token-mean" (GRPO), "seq-mean-token-sum" (Dr. GRPO)
+    loss_agg_mode: "token-mean"
     optim:
       betas: [0.9, 0.999]
       lr: 1e-6
@@ -86,9 +88,14 @@ algorithm:
   gamma: 1.0
   lam: 1.0
   high_level_gamma: 0.95
-  adv_estimator: gae
+  adv_estimator: gae  # "gae" for PPO, "grpo" for GRPO/Dr.GRPO
   bi_level_gae: False
   zero_task_advantage: False  # if True, zero out advantages to remove task-driven policy gradient
+  # Dr. GRPO: set to False to use (R - mean) instead of (R - mean) / std
+  norm_adv_by_std_in_grpo: True
+  # Soft advantage reweighting: scale advantages by (group_std / max_group_std)
+  # This down-weights low reward variance prompts instead of hard filtering
+  soft_advantage_reweight: False
   kl_penalty: kl  # how to estimate kl divergence
   kl_ctrl:
     type: fixed

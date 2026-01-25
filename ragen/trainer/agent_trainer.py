@@ -136,7 +136,7 @@ def adjust_batch(batch: DataProto, size_divisor: int, mode: str = "copy") -> Dat
     return adjusted_batch
 
 
-def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0):
+def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0, soft_advantage_reweight=False):
     # Back-compatible with trainers that do not compute response mask in fit
     if "response_mask" not in data.batch:
         data.batch["response_mask"] = compute_response_mask(data)
@@ -172,13 +172,19 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
         # Call compute_grpo_outcome_advantage with parameters matching its definition
         # Pass episode_ids for deduplication in single_turn/limited_multi_turn mode
         episode_ids = data.non_tensor_batch.get("episode_ids", None)
-        advantages, returns = compute_grpo_outcome_advantage(
+        result = compute_grpo_outcome_advantage(
             token_level_rewards=data.batch["token_level_rewards"],
             response_mask=grpo_calculation_mask,
             index=data.non_tensor_batch["uid"],
             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
             episode_ids=episode_ids,
+            return_group_std=soft_advantage_reweight,
         )
+        if soft_advantage_reweight:
+            advantages, returns, group_std = result
+            data.batch["group_std"] = group_std
+        else:
+            advantages, returns = result
         data.batch["advantages"] = advantages
         data.batch["returns"] = returns
     elif adv_estimator == AdvantageEstimator.REINFORCE_PLUS_PLUS_BASELINE:
@@ -847,6 +853,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                     # compute advantages, executed on the driver process
 
                     norm_adv_by_std_in_grpo = self.config.algorithm.get("norm_adv_by_std_in_grpo", True)  # GRPO adv normalization factor
+                    soft_advantage_reweight = self.config.algorithm.get("soft_advantage_reweight", False)
 
                     batch = compute_advantage(
                         batch,
@@ -858,7 +865,37 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                         multi_turn=True,
                         high_level_gamma=self.config.algorithm.high_level_gamma,
                         bi_level_gae=self.config.algorithm.bi_level_gae,
+                        soft_advantage_reweight=soft_advantage_reweight,
                     )
+
+                    # Apply soft advantage reweighting based on reward variance (group std)
+                    # This scales advantages by (group_std / max_group_std) to down-weight low-variance prompts
+                    if soft_advantage_reweight and "group_std" in batch.batch:
+                        group_std = batch.batch["group_std"]  # (batch_size,)
+                        index = batch.non_tensor_batch["uid"]
+
+                        # Compute per-prompt std (take first occurrence per group)
+                        unique_idx, inverse = np.unique(index, return_inverse=True)
+                        prompt_std = torch.zeros(len(unique_idx), device=group_std.device)
+                        for i, idx in enumerate(unique_idx):
+                            mask = (inverse == i)
+                            prompt_std[i] = group_std[mask][0]
+
+                        # Compute soft weight: weight = prompt_std / (max_std + epsilon)
+                        max_std = prompt_std.max()
+                        epsilon = 1e-6
+                        prompt_weight = prompt_std / (max_std + epsilon)
+
+                        # Broadcast back to batch
+                        sample_weight = prompt_weight[torch.from_numpy(inverse).to(group_std.device)]
+
+                        # Apply to advantages (expand to match token dimension)
+                        batch.batch["advantages"] = batch.batch["advantages"] * sample_weight.unsqueeze(-1)
+
+                        # Log soft reweight metrics
+                        metrics["train/soft_reweight_min"] = prompt_weight.min().item()
+                        metrics["train/soft_reweight_max"] = prompt_weight.max().item()
+                        metrics["train/soft_reweight_mean"] = prompt_weight.mean().item()
 
                     # Apply filter loss scaling by scaling advantages
                     # This avoids modifying the actor implementation in the submodule

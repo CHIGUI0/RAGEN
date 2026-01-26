@@ -451,13 +451,12 @@ class RewardRolloutFilter(RolloutFilter):
         # [0-0.2], [0.2-0.5], [0.5-1], [1-2], [2-3], [3-5], [5+]
         buckets_masks = {
             "all": torch.ones_like(reward_std, dtype=torch.bool),
-            # "var_0_0.2": (reward_std >= 0) & (reward_std < 0.2),
-            # "var_0.2_0.5": (reward_std >= 0.2) & (reward_std < 0.5),
-            # "var_0.5_1.0": (reward_std >= 0.5) & (reward_std < 1.0),
-            # "var_1.0_2.0": (reward_std >= 1.0) & (reward_std < 2.0),
-            # "var_2.0_3.0": (reward_std >= 2.0) & (reward_std < 3.0),
-            # "var_3.0_5.0": (reward_std >= 3.0) & (reward_std < 5.0),
-            "var_0_5": (reward_std >= 0) & (reward_std < 5),
+            "var_0_0.2": (reward_std >= 0) & (reward_std < 0.2),
+            "var_0.2_0.5": (reward_std >= 0.2) & (reward_std < 0.5),
+            "var_0.5_1.0": (reward_std >= 0.5) & (reward_std < 1.0),
+            "var_1.0_2.0": (reward_std >= 1.0) & (reward_std < 2.0),
+            "var_2.0_3.0": (reward_std >= 2.0) & (reward_std < 3.0),
+            "var_3.0_5.0": (reward_std >= 3.0) & (reward_std < 5.0),
             "var_5.0_plus": (reward_std >= 5.0)
         }
         

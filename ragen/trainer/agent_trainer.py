@@ -976,12 +976,16 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                                 entropy = bucket_metrics.get('actor/loss/entropy', 0)
                                 policy = bucket_metrics.get('actor/loss/policy', 0)
                                 total = bucket_metrics.get('actor/loss/total', 0)
+                                grad_task = bucket_metrics.get('actor/grad_norm/task', 0)
+                                grad_entropy = bucket_metrics.get('actor/grad_norm/entropy', 0)
+                                grad_kl = bucket_metrics.get('actor/grad_norm/kl', 0)
                                 
                                 print(f"[Gradient Analysis] Bucket '{bucket_name}' Metrics:")
                                 print(f"    - KL Loss:      {kl:>10.6f}")
                                 print(f"    - Entropy Loss: {entropy:>10.6f}")
                                 print(f"    - Policy Loss:  {policy:>10.6f} (Task)")
                                 print(f"    - Total Loss:   {total:>10.6f}")
+                                print(f"    - Grad Norms:   task={grad_task:>10.6f} | entropy={grad_entropy:>10.6f} | kl={grad_kl:>10.6f}")
                                 print("")
                         else:
                             # Standard update

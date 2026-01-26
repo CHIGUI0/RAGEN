@@ -23,7 +23,7 @@ GPU_CSV=$(seq -s, 0 $((TOTAL_GPUS - 1)))
 # Single run using all GPUs
 python3 train.py --config-name "_2_sokoban" \
     trainer.project_name='AGEN_gradient_analysis' \
-    trainer.experiment_name='gradient_analysis_sokoban_0.5b' \
+    trainer.experiment_name='gradient_analysis_sokoban_3b' \
     trainer.n_gpus_per_node="${TOTAL_GPUS}" \
     trainer.nnodes=1 \
     trainer.save_freq=-1 \
@@ -36,11 +36,11 @@ python3 train.py --config-name "_2_sokoban" \
     algorithm.kl_ctrl.kl_coef=0.001 \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
     actor_rollout_ref.actor.use_kl_loss=True \
-    es_manager.train.env_groups=8 \
-    es_manager.train.group_size=8 \
-    es_manager.train.env_configs.n_groups=[8] \
-    trainer.default_local_dir="/mnt/permanent/xjin/20260126_filters_final/gradient_analysis_sokoban_0.5b" \
-    model_path=Qwen/Qwen2.5-0.5B-Instruct \
+    es_manager.train.env_groups=256 \
+    es_manager.train.group_size=32 \
+    es_manager.train.env_configs.n_groups=[256] \
+    trainer.default_local_dir="/mnt/permanent/xjin/20260126_filters_final/gradient_analysis_sokoban_3b" \
+    model_path=Qwen/Qwen2.5-3B-Instruct \
     algorithm.adv_estimator=gae \
     system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\"" \
     trainer.val_before_train=False \

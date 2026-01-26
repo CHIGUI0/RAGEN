@@ -157,7 +157,7 @@ class DataParallelPPOActor(BasePPOActor):
 
             return entropy, log_probs
 
-    def _optimizer_step(self):
+    def _optimizer_step(self, skip_step=False):
         assert self.config.grad_clip is not None
 
         if isinstance(self.actor_module, FSDP):
@@ -171,7 +171,7 @@ class DataParallelPPOActor(BasePPOActor):
         if not torch.isfinite(grad_norm):
             print(f"WARN: rank {torch.distributed.get_rank()} grad_norm is not finite: {grad_norm}")
             self.actor_optimizer.zero_grad()
-        else:
+        elif not skip_step:
             self.actor_optimizer.step()
         return grad_norm
 
@@ -255,7 +255,7 @@ class DataParallelPPOActor(BasePPOActor):
         return log_probs, entropys
 
     @GPUMemoryLogger(role="dp actor", logger=logger)
-    def update_policy(self, data: DataProto):
+    def update_policy(self, data: DataProto, skip_optimizer_step=False):
         # make sure we are in training mode
         self.actor_module.train()
 
@@ -369,7 +369,7 @@ class DataParallelPPOActor(BasePPOActor):
                         data["actor/entropy_loss"] = entropy_loss.detach().item()
                     append_to_dict(metrics, data)
 
-                grad_norm = self._optimizer_step()
+                grad_norm = self._optimizer_step(skip_step=skip_optimizer_step)
                 data = {"actor/grad_norm": grad_norm.detach().item()}
             append_to_dict(metrics, data)
         self.actor_optimizer.zero_grad()

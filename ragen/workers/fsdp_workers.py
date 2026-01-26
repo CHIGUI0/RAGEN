@@ -148,6 +148,8 @@ class ActorRolloutRefWorker(VerlActorRolloutRefWorker):
     @DistProfiler.annotate(color="red", role="actor_update")
     def update_actor(self, data: DataProto, skip_optimizer_step=False):
         data = data.to(get_device_id())
+        if "skip_optimizer_step" in data.meta_info:
+            skip_optimizer_step = bool(data.meta_info["skip_optimizer_step"])
         return self.actor.update_policy(data, skip_optimizer_step=skip_optimizer_step)
 
 class AsyncActorRolloutRefWorker(VerlAsyncActorRolloutRefWorker):

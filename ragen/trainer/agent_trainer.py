@@ -951,8 +951,8 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                                 print(f"[Gradient Analysis] Processing bucket '{bucket_name}' with {count} samples.")
                                 
                                 # Update actor with optimizer step SKIPPED (probing only)
-                                # The method signature update in workers allows this
-                                actor_output = self.actor_rollout_wg.update_actor(sub_batch, skip_optimizer_step=True)
+                                sub_batch.meta_info["skip_optimizer_step"] = True
+                                actor_output = self.actor_rollout_wg.update_actor(sub_batch)
                                 bucket_metrics = reduce_metrics(actor_output.meta_info["metrics"])
                                 
                                 # Prefix and merge metrics

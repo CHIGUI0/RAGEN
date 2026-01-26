@@ -144,6 +144,12 @@ class ActorRolloutRefWorker(VerlActorRolloutRefWorker):
 
         return output
 
+    @register(dispatch_mode=make_nd_compute_dataproto_dispatch_fn(mesh_name="actor"))
+    @DistProfiler.annotate(color="red", role="actor_update")
+    def update_actor(self, data: DataProto, skip_optimizer_step=False):
+        data = data.to(get_device_id())
+        return self.actor.update_policy(data, skip_optimizer_step=skip_optimizer_step)
+
 class AsyncActorRolloutRefWorker(VerlAsyncActorRolloutRefWorker):
     pass
 

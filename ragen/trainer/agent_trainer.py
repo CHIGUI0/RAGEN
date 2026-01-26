@@ -961,6 +961,20 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                                     # Also keep original names for "all" bucket to satisfy standard logging
                                     if bucket_name == "all":
                                         metrics[k] = v
+                                
+                                # Log to console as requested
+                                # Assuming standard PPO model names: actor/loss/policy, actor/loss/kl, actor/loss/entropy
+                                kl = bucket_metrics.get('actor/loss/kl', 0)
+                                entropy = bucket_metrics.get('actor/loss/entropy', 0)
+                                policy = bucket_metrics.get('actor/loss/policy', 0)
+                                total = bucket_metrics.get('actor/loss/total', 0)
+                                
+                                print(f"[Gradient Analysis] Bucket '{bucket_name}' Metrics:")
+                                print(f"    - KL Loss:      {kl:>10.6f}")
+                                print(f"    - Entropy Loss: {entropy:>10.6f}")
+                                print(f"    - Policy Loss:  {policy:>10.6f} (Task)")
+                                print(f"    - Total Loss:   {total:>10.6f}")
+                                print("")
                         else:
                             # Standard update
                             actor_output = self.actor_rollout_wg.update_actor(batch)

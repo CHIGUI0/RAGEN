@@ -451,38 +451,41 @@ class RewardRolloutFilter(RolloutFilter):
         # [0-0.2], [0.2-0.5], [0.5-1], [1-2], [2-3], [3-5], [5+]
         buckets_masks = {
             "all": torch.ones_like(reward_std, dtype=torch.bool),
-            "var_0_0.2": (reward_std >= 0) & (reward_std < 0.2),
-            "var_0.2_0.5": (reward_std >= 0.2) & (reward_std < 0.5),
-            "var_0.5_1.0": (reward_std >= 0.5) & (reward_std < 1.0),
-            "var_1.0_2.0": (reward_std >= 1.0) & (reward_std < 2.0),
-            "var_2.0_3.0": (reward_std >= 2.0) & (reward_std < 3.0),
-            "var_3.0_5.0": (reward_std >= 3.0) & (reward_std < 5.0),
+            # "var_0_0.2": (reward_std >= 0) & (reward_std < 0.2),
+            # "var_0.2_0.5": (reward_std >= 0.2) & (reward_std < 0.5),
+            # "var_0.5_1.0": (reward_std >= 0.5) & (reward_std < 1.0),
+            # "var_1.0_2.0": (reward_std >= 1.0) & (reward_std < 2.0),
+            # "var_2.0_3.0": (reward_std >= 2.0) & (reward_std < 3.0),
+            # "var_3.0_5.0": (reward_std >= 3.0) & (reward_std < 5.0),
+            "var_0_5": (reward_std >= 0) & (reward_std < 5),
             "var_5.0_plus": (reward_std >= 5.0)
         }
         
         result = {}
+        total_samples = reward_std.numel()
+        
+        print(f"\n[Gradient Analysis] Bucket Distribution (Total Samples: {total_samples})")
+        print("-" * 80)
+        print(f"{'Bucket':<20} | {'Count':<10} | {'Percentage':<12} | {'Avg Reward Std':<15}")
+        print("-" * 80)
+        
         for name, mask in buckets_masks.items():
-            if mask.sum() > 0:
-                # We can use standard boolean indexing on DataProto if supported,
-                # or manually filter. Using the existing _apply_mask helper 
-                # would be cleaner but it modifies in-place.
-                # DataProto usually supports slicing.
-                # Let's clone the batch structure? No, deepcopy is expensive.
-                # Assuming batch[mask] works or we use a lightweight slice.
-                # Since DataProto logic for __getitem__ might not be full, 
-                # let's rely on manual masking if needed.
-                # But wait, batch[mask] IS supported in verl DataProto usually.
-                # Let's try batch[mask].
+            count = mask.sum().item()
+            if count > 0:
+                percentage = (count / total_samples) * 100
+                avg_std = reward_std[mask].mean().item()
+                print(f"{name:<20} | {count:<10} | {percentage:>10.2f}% | {avg_std:>12.4f}")
+                
                 try:
                     subset = batch[mask]
                     result[name] = subset
                 except Exception:
-                    # Fallback if __getitem__ not supported for boolean mask
-                    # Use a shallow copy + _apply_mask?
-                    # Be careful about in-place modification.
-                    # Creating a new DataProto with sliced data is best.
-                    pass # Assuming it works as per previous Trainer code usage.
                     result[name] = batch[mask]
+            else:
+                if name == "all":
+                    print(f"{name:<20} | {count:<10} | {0:>10.2f}% | {'N/A':>12}")
+        
+        print("-" * 80 + "\n")
         
         return result
 

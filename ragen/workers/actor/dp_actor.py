@@ -260,6 +260,7 @@ class DataParallelPPOActor(BasePPOActor):
         self.actor_module.train()
         if "skip_optimizer_step" in data.meta_info:
             skip_optimizer_step = bool(data.meta_info["skip_optimizer_step"]) or skip_optimizer_step
+        grad_component_analysis = bool(data.meta_info.get("grad_component_analysis", False))
 
         temperature = data.meta_info["temperature"]  # temperature must be in the data.meta_info to avoid silent error
 
@@ -295,84 +296,181 @@ class DataParallelPPOActor(BasePPOActor):
                     # split batch into micro_batches
                     micro_batches = mini_batch.split(self.config.ppo_micro_batch_size_per_gpu)
 
-                self.actor_optimizer.zero_grad()
+                if not isinstance(micro_batches, list):
+                    micro_batches = list(micro_batches)
 
-                for data in micro_batches:
-                    # Support all hardwares
-                    if isinstance(data, DataProto):
-                        data = {**data.batch.to(torch.cuda.current_device()), **data.non_tensor_batch}
-                    else:
-                        data = data.to(torch.cuda.current_device())  # actor device is cpu when using offload
-                    responses = data["responses"]
-                    response_length = responses.size(1)
-                    attention_mask = data["attention_mask"]
-                    response_mask = data["response_mask"]
-                    # response_mask = attention_mask[:, -response_length:]
-                    old_log_prob = data["old_log_probs"]
-                    advantages = data["advantages"]
-
-                    clip_ratio = self.config.clip_ratio
-                    clip_ratio_low = self.config.clip_ratio_low if self.config.clip_ratio_low is not None else clip_ratio
-                    clip_ratio_high = self.config.clip_ratio_high if self.config.clip_ratio_high is not None else clip_ratio
-                    clip_ratio_c = self.config.get("clip_ratio_c", 3.0)
+                if grad_component_analysis and skip_optimizer_step:
                     entropy_coeff = self.config.entropy_coeff
-                    loss_agg_mode = self.config.loss_agg_mode
-
-                    # all return: (bsz, response_length)
-                    calculate_entropy = False
+                    components = ["task"]
                     if entropy_coeff != 0:
-                        calculate_entropy = True
-                    entropy, log_prob = self._forward_micro_batch(micro_batch=data, temperature=temperature, calculate_entropy=calculate_entropy)
-
-                    pg_loss, pg_clipfrac, ppo_kl, pg_clipfrac_lower = compute_policy_loss(
-                        old_log_prob=old_log_prob,
-                        log_prob=log_prob,
-                        advantages=advantages,
-                        response_mask=response_mask,
-                        cliprange=clip_ratio,
-                        cliprange_low=clip_ratio_low,
-                        cliprange_high=clip_ratio_high,
-                        clip_ratio_c=clip_ratio_c,
-                        loss_agg_mode=loss_agg_mode,
-                    )
-
-                    if entropy_coeff != 0:
-                        entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
-
-                        # compute policy loss
-                        policy_loss = pg_loss - entropy_loss * entropy_coeff
-                    else:
-                        policy_loss = pg_loss
-
+                        components.append("entropy")
                     if self.config.use_kl_loss:
-                        ref_log_prob = data["ref_log_prob"]
-                        # compute kl loss
-                        kld = kl_penalty(logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type)
-                        kl_loss = agg_loss(loss_mat=kld, loss_mask=response_mask, loss_agg_mode=self.config.loss_agg_mode)
+                        components.append("kl")
 
-                        policy_loss = policy_loss + kl_loss * self.config.kl_loss_coef
-                        metrics["actor/kl_loss"] = kl_loss.detach().item()
-                        metrics["actor/kl_coef"] = self.config.kl_loss_coef
+                    for component in components:
+                        self.actor_optimizer.zero_grad()
+                        for data in micro_batches:
+                            # Support all hardwares
+                            if isinstance(data, DataProto):
+                                data = {**data.batch.to(torch.cuda.current_device()), **data.non_tensor_batch}
+                            else:
+                                data = data.to(torch.cuda.current_device())  # actor device is cpu when using offload
+                            responses = data["responses"]
+                            response_length = responses.size(1)
+                            attention_mask = data["attention_mask"]
+                            response_mask = data["response_mask"]
+                            # response_mask = attention_mask[:, -response_length:]
+                            old_log_prob = data["old_log_probs"]
+                            advantages = data["advantages"]
 
-                    if self.config.use_dynamic_bsz:
-                        # relative to the dynamic bsz
-                        loss = policy_loss * (len(data) / self.config.ppo_mini_batch_size)
-                    else:
-                        loss = policy_loss / self.gradient_accumulation
-                    loss.backward()
+                            clip_ratio = self.config.clip_ratio
+                            clip_ratio_low = self.config.clip_ratio_low if self.config.clip_ratio_low is not None else clip_ratio
+                            clip_ratio_high = self.config.clip_ratio_high if self.config.clip_ratio_high is not None else clip_ratio
+                            clip_ratio_c = self.config.get("clip_ratio_c", 3.0)
+                            loss_agg_mode = self.config.loss_agg_mode
 
-                    data = {
-                        "actor/pg_loss": pg_loss.detach().item(),
-                        "actor/pg_clipfrac": pg_clipfrac.detach().item(),
-                        "actor/ppo_kl": ppo_kl.detach().item(),
-                        "actor/pg_clipfrac_lower": pg_clipfrac_lower.detach().item(),
-                    }
-                    if entropy_coeff != 0:
-                        data["actor/entropy_loss"] = entropy_loss.detach().item()
+                            # all return: (bsz, response_length)
+                            calculate_entropy = entropy_coeff != 0
+                            entropy, log_prob = self._forward_micro_batch(micro_batch=data, temperature=temperature, calculate_entropy=calculate_entropy)
+
+                            pg_loss, pg_clipfrac, ppo_kl, pg_clipfrac_lower = compute_policy_loss(
+                                old_log_prob=old_log_prob,
+                                log_prob=log_prob,
+                                advantages=advantages,
+                                response_mask=response_mask,
+                                cliprange=clip_ratio,
+                                cliprange_low=clip_ratio_low,
+                                cliprange_high=clip_ratio_high,
+                                clip_ratio_c=clip_ratio_c,
+                                loss_agg_mode=loss_agg_mode,
+                            )
+
+                            entropy_term = None
+                            if entropy_coeff != 0:
+                                entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+                                entropy_term = -entropy_loss * entropy_coeff
+
+                            kl_term = None
+                            if self.config.use_kl_loss:
+                                ref_log_prob = data["ref_log_prob"]
+                                # compute kl loss
+                                kld = kl_penalty(logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type)
+                                kl_loss = agg_loss(loss_mat=kld, loss_mask=response_mask, loss_agg_mode=self.config.loss_agg_mode)
+                                kl_term = kl_loss * self.config.kl_loss_coef
+
+                            if component == "task":
+                                component_loss = pg_loss
+                            elif component == "entropy":
+                                component_loss = entropy_term
+                            else:
+                                component_loss = kl_term
+
+                            if component_loss is None:
+                                continue
+
+                            if self.config.use_dynamic_bsz:
+                                # relative to the dynamic bsz
+                                loss = component_loss * (len(data) / self.config.ppo_mini_batch_size)
+                            else:
+                                loss = component_loss / self.gradient_accumulation
+                            loss.backward()
+
+                            if component == "task":
+                                loss_metrics = {
+                                    "actor/loss/policy": pg_loss.detach().item(),
+                                }
+                                total_loss = pg_loss
+                                if entropy_term is not None:
+                                    total_loss = total_loss + entropy_term
+                                    loss_metrics["actor/loss/entropy"] = entropy_term.detach().item()
+                                if kl_term is not None:
+                                    total_loss = total_loss + kl_term
+                                    loss_metrics["actor/loss/kl"] = kl_term.detach().item()
+                                loss_metrics["actor/loss/total"] = total_loss.detach().item()
+                                append_to_dict(metrics, loss_metrics)
+
+                        grad_norm = self._optimizer_step(skip_step=True)
+                        append_to_dict(metrics, {f"actor/grad_norm/{component}": grad_norm.detach().item()})
+                        self.actor_optimizer.zero_grad()
+                else:
+                    self.actor_optimizer.zero_grad()
+
+                    for data in micro_batches:
+                        # Support all hardwares
+                        if isinstance(data, DataProto):
+                            data = {**data.batch.to(torch.cuda.current_device()), **data.non_tensor_batch}
+                        else:
+                            data = data.to(torch.cuda.current_device())  # actor device is cpu when using offload
+                        responses = data["responses"]
+                        response_length = responses.size(1)
+                        attention_mask = data["attention_mask"]
+                        response_mask = data["response_mask"]
+                        # response_mask = attention_mask[:, -response_length:]
+                        old_log_prob = data["old_log_probs"]
+                        advantages = data["advantages"]
+
+                        clip_ratio = self.config.clip_ratio
+                        clip_ratio_low = self.config.clip_ratio_low if self.config.clip_ratio_low is not None else clip_ratio
+                        clip_ratio_high = self.config.clip_ratio_high if self.config.clip_ratio_high is not None else clip_ratio
+                        clip_ratio_c = self.config.get("clip_ratio_c", 3.0)
+                        entropy_coeff = self.config.entropy_coeff
+                        loss_agg_mode = self.config.loss_agg_mode
+
+                        # all return: (bsz, response_length)
+                        calculate_entropy = False
+                        if entropy_coeff != 0:
+                            calculate_entropy = True
+                        entropy, log_prob = self._forward_micro_batch(micro_batch=data, temperature=temperature, calculate_entropy=calculate_entropy)
+
+                        pg_loss, pg_clipfrac, ppo_kl, pg_clipfrac_lower = compute_policy_loss(
+                            old_log_prob=old_log_prob,
+                            log_prob=log_prob,
+                            advantages=advantages,
+                            response_mask=response_mask,
+                            cliprange=clip_ratio,
+                            cliprange_low=clip_ratio_low,
+                            cliprange_high=clip_ratio_high,
+                            clip_ratio_c=clip_ratio_c,
+                            loss_agg_mode=loss_agg_mode,
+                        )
+
+                        if entropy_coeff != 0:
+                            entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+
+                            # compute policy loss
+                            policy_loss = pg_loss - entropy_loss * entropy_coeff
+                        else:
+                            policy_loss = pg_loss
+
+                        if self.config.use_kl_loss:
+                            ref_log_prob = data["ref_log_prob"]
+                            # compute kl loss
+                            kld = kl_penalty(logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type)
+                            kl_loss = agg_loss(loss_mat=kld, loss_mask=response_mask, loss_agg_mode=self.config.loss_agg_mode)
+
+                            policy_loss = policy_loss + kl_loss * self.config.kl_loss_coef
+                            metrics["actor/kl_loss"] = kl_loss.detach().item()
+                            metrics["actor/kl_coef"] = self.config.kl_loss_coef
+
+                        if self.config.use_dynamic_bsz:
+                            # relative to the dynamic bsz
+                            loss = policy_loss * (len(data) / self.config.ppo_mini_batch_size)
+                        else:
+                            loss = policy_loss / self.gradient_accumulation
+                        loss.backward()
+
+                        data = {
+                            "actor/pg_loss": pg_loss.detach().item(),
+                            "actor/pg_clipfrac": pg_clipfrac.detach().item(),
+                            "actor/ppo_kl": ppo_kl.detach().item(),
+                            "actor/pg_clipfrac_lower": pg_clipfrac_lower.detach().item(),
+                        }
+                        if entropy_coeff != 0:
+                            data["actor/entropy_loss"] = entropy_loss.detach().item()
+                        append_to_dict(metrics, data)
+
+                    grad_norm = self._optimizer_step(skip_step=skip_optimizer_step)
+                    data = {"actor/grad_norm": grad_norm.detach().item()}
                     append_to_dict(metrics, data)
-
-                grad_norm = self._optimizer_step(skip_step=skip_optimizer_step)
-                data = {"actor/grad_norm": grad_norm.detach().item()}
-            append_to_dict(metrics, data)
         self.actor_optimizer.zero_grad()
         return metrics

@@ -29,6 +29,7 @@ from peft import LoraConfig, TaskType, get_peft_model
 from verl import DataProto
 from verl.models.transformers.monkey_patch import apply_monkey_patch
 from verl.single_controller.base.decorator import (
+    Dispatch,
     register,
     make_nd_compute_dataproto_dispatch_fn,
 )
@@ -68,6 +69,19 @@ class ActorRolloutRefWorker(VerlActorRolloutRefWorker):
     This worker can be instantiated as a standalone actor or a standalone rollout or a standalone reference policy
     or a hybrid engine based on the config.rollout
     """
+
+    @register(dispatch_mode=Dispatch.ONE_TO_ALL)
+    def init_model(self):
+        super().init_model()
+        if self._is_actor:
+            from ragen.workers.actor.dp_actor import DataParallelPPOActor as RagenDataParallelPPOActor
+
+            # Use the local actor implementation so we can do component-wise gradient analysis
+            self.actor = RagenDataParallelPPOActor(
+                config=self.config.actor,
+                actor_module=self.actor_module_fsdp,
+                actor_optimizer=self.actor_optimizer,
+            )
 
 
     @register(dispatch_mode=make_nd_compute_dataproto_dispatch_fn(mesh_name="rollout"))

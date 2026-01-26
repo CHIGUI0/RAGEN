@@ -952,12 +952,20 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                                 
                                 # Update actor with optimizer step SKIPPED (probing only)
                                 sub_batch.meta_info["skip_optimizer_step"] = True
+                                sub_batch.meta_info["grad_component_analysis"] = True
                                 actor_output = self.actor_rollout_wg.update_actor(sub_batch)
                                 bucket_metrics = reduce_metrics(actor_output.meta_info["metrics"])
                                 
                                 # Prefix and merge metrics
                                 for k, v in bucket_metrics.items():
-                                    metrics[f"grad_norm/{bucket_name}/{k}"] = v
+                                    if k.startswith("actor/grad_norm/"):
+                                        component = k.split("/", 2)[2]
+                                        metrics[f"grad_norm/{bucket_name}/{component}"] = v
+                                    elif k.startswith("actor/loss/"):
+                                        component = k.split("/", 2)[2]
+                                        metrics[f"grad_norm/{bucket_name}/loss/{component}"] = v
+                                    else:
+                                        metrics[f"grad_norm/{bucket_name}/{k}"] = v
                                     # Also keep original names for "all" bucket to satisfy standard logging
                                     if bucket_name == "all":
                                         metrics[k] = v

@@ -258,6 +258,8 @@ class DataParallelPPOActor(BasePPOActor):
     def update_policy(self, data: DataProto, skip_optimizer_step=False):
         # make sure we are in training mode
         self.actor_module.train()
+        if "skip_optimizer_step" in data.meta_info:
+            skip_optimizer_step = bool(data.meta_info["skip_optimizer_step"]) or skip_optimizer_step
 
         temperature = data.meta_info["temperature"]  # temperature must be in the data.meta_info to avoid silent error
 

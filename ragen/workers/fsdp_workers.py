@@ -150,7 +150,9 @@ class ActorRolloutRefWorker(VerlActorRolloutRefWorker):
         data = data.to(get_device_id())
         if "skip_optimizer_step" in data.meta_info:
             skip_optimizer_step = bool(data.meta_info["skip_optimizer_step"])
-        return self.actor.update_policy(data, skip_optimizer_step=skip_optimizer_step)
+        if skip_optimizer_step:
+            data.meta_info["skip_optimizer_step"] = True
+        return self.actor.update_policy(data)
 
 class AsyncActorRolloutRefWorker(VerlAsyncActorRolloutRefWorker):
     pass

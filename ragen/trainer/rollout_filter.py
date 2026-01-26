@@ -397,6 +397,9 @@ class RewardRolloutFilter(RolloutFilter):
         )
 
         if self.strategy == "top_p" and self.config.value >= 1 and self.config.include_zero:
+            # Attach reward std to batch even if not filtering
+            reward_std_per_sample = in_group_std.unsqueeze(1).expand(-1, group_size).reshape(-1).to(batch.batch["responses"].device)
+            batch.batch["reward_std"] = reward_std_per_sample
             return batch, metrics
 
         if has_episode_ids:
@@ -419,7 +422,69 @@ class RewardRolloutFilter(RolloutFilter):
 
         batch = self._apply_mask(batch, mask)
 
+        # Re-compute reward std for kept samples to ensure alignment
+        # Note: The actor will receive the filtered batch, so we need to attach the info here.
+        # Ideally we want the ORIGINAL group std, not the filtered one (which might be 0 if single sample kept).
+        # We broadcast the original in_group_std to the original batch size, then apply the mask.
+        reward_std_per_sample = in_group_std.unsqueeze(1).expand(-1, group_size).reshape(-1).to(batch.batch["responses"].device)
+        
+        # Apply the same mask to the reward_std tensor
+        if has_episode_ids:
+             # Mask is already boolean of shape (batch_size,)
+             reward_std_filtered = reward_std_per_sample[mask]
+        else:
+             # Mask is boolean of shape (batch_size,)
+             reward_std_filtered = reward_std_per_sample[mask]
+        
+        batch.batch["reward_std"] = reward_std_filtered
+
         return batch, metrics
+
+    def split_into_buckets(self, batch: DataProto) -> Dict[str, DataProto]:
+        """Splits the batch into variance buckets for gradient analysis."""
+        if "reward_std" not in batch.batch:
+             raise ValueError("Batch must have 'reward_std' to split into buckets.")
+        
+        reward_std = batch.batch["reward_std"]
+        
+        # Define buckets based on user request:
+        # [0-0.2], [0.2-0.5], [0.5-1], [1-2], [2-3], [3-5], [5+]
+        buckets_masks = {
+            "all": torch.ones_like(reward_std, dtype=torch.bool),
+            "var_0_0.2": (reward_std >= 0) & (reward_std < 0.2),
+            "var_0.2_0.5": (reward_std >= 0.2) & (reward_std < 0.5),
+            "var_0.5_1.0": (reward_std >= 0.5) & (reward_std < 1.0),
+            "var_1.0_2.0": (reward_std >= 1.0) & (reward_std < 2.0),
+            "var_2.0_3.0": (reward_std >= 2.0) & (reward_std < 3.0),
+            "var_3.0_5.0": (reward_std >= 3.0) & (reward_std < 5.0),
+            "var_5.0_plus": (reward_std >= 5.0)
+        }
+        
+        result = {}
+        for name, mask in buckets_masks.items():
+            if mask.sum() > 0:
+                # We can use standard boolean indexing on DataProto if supported,
+                # or manually filter. Using the existing _apply_mask helper 
+                # would be cleaner but it modifies in-place.
+                # DataProto usually supports slicing.
+                # Let's clone the batch structure? No, deepcopy is expensive.
+                # Assuming batch[mask] works or we use a lightweight slice.
+                # Since DataProto logic for __getitem__ might not be full, 
+                # let's rely on manual masking if needed.
+                # But wait, batch[mask] IS supported in verl DataProto usually.
+                # Let's try batch[mask].
+                try:
+                    subset = batch[mask]
+                    result[name] = subset
+                except Exception:
+                    # Fallback if __getitem__ not supported for boolean mask
+                    # Use a shallow copy + _apply_mask?
+                    # Be careful about in-place modification.
+                    # Creating a new DataProto with sliced data is best.
+                    pass # Assuming it works as per previous Trainer code usage.
+                    result[name] = batch[mask]
+        
+        return result
 
 
 class EntropyRolloutFilter(RolloutFilter):

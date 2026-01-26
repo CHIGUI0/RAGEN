@@ -930,9 +930,42 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                     # update actor
                     with marked_timer("update_actor", timing_raw):
                         batch.meta_info["multi_turn"] = True
-                        actor_output = self.actor_rollout_wg.update_actor(batch)
-                    actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
-                    metrics.update(actor_output_metrics)
+                        
+                        # Gradient Analysis Mode logic
+                        if self.config.trainer.get("gradient_analysis_mode", False):
+                            print(f"[Gradient Analysis] Step {self.global_steps}: Running analysis on buckets...")
+                            
+                            # Use filter to create buckets
+                            try:
+                                buckets = self.rollout_filter.split_into_buckets(batch)
+                            except AttributeError:
+                                print("[Gradient Analysis] Rollout filter does not support 'split_into_buckets'. Using default batch.")
+                                buckets = {"all": batch}
+                            
+                            for bucket_name, sub_batch in buckets.items():
+                                count = sub_batch.batch.batch_size[0]
+                                if count == 0:
+                                    print(f"[Gradient Analysis] Bucket '{bucket_name}' is empty. Skipping.")
+                                    continue
+                                
+                                print(f"[Gradient Analysis] Processing bucket '{bucket_name}' with {count} samples.")
+                                
+                                # Update actor with optimizer step SKIPPED (probing only)
+                                # The method signature update in workers allows this
+                                actor_output = self.actor_rollout_wg.update_actor(sub_batch, skip_optimizer_step=True)
+                                bucket_metrics = reduce_metrics(actor_output.meta_info["metrics"])
+                                
+                                # Prefix and merge metrics
+                                for k, v in bucket_metrics.items():
+                                    metrics[f"grad_norm/{bucket_name}/{k}"] = v
+                                    # Also keep original names for "all" bucket to satisfy standard logging
+                                    if bucket_name == "all":
+                                        metrics[k] = v
+                        else:
+                            # Standard update
+                            actor_output = self.actor_rollout_wg.update_actor(batch)
+                            actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
+                            metrics.update(actor_output_metrics)
 
                 # Log rollout generations if enabled
                 rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)

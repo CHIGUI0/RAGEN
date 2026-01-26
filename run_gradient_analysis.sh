@@ -35,6 +35,7 @@ python3 train.py --config-name "_2_sokoban" \
     ppo_mini_batch_size=32 \
     algorithm.kl_ctrl.kl_coef=0.001 \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
+    actor_rollout_ref.actor.use_kl_loss=True \
     es_manager.train.env_groups=8 \
     es_manager.train.group_size=8 \
     es_manager.train.env_configs.n_groups=[8] \

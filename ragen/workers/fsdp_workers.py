@@ -152,7 +152,10 @@ class ActorRolloutRefWorker(VerlActorRolloutRefWorker):
             skip_optimizer_step = bool(data.meta_info["skip_optimizer_step"])
         if skip_optimizer_step:
             data.meta_info["skip_optimizer_step"] = True
-        return self.actor.update_policy(data)
+        output = self.actor.update_policy(data)
+        if isinstance(output, DataProto):
+            return output
+        return DataProto(meta_info={"metrics": output})
 
 class AsyncActorRolloutRefWorker(VerlAsyncActorRolloutRefWorker):
     pass

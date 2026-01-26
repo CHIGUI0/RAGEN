@@ -247,6 +247,11 @@ run_experiment() {
         "actor_rollout_ref.rollout.gpu_memory_utilization=${GPU_MEMORY_UTILIZATION}"
     )
 
+    local env_overrides=()
+    if [ "$task" = "frozenlake" ]; then
+        env_overrides+=("custom_envs.CoordFrozenLake.env_config.success_rate=1.0")
+    fi
+
     local algo_overrides
     algo_overrides=$(get_algo_overrides "$algo")
     read -r -a algo_args <<< "$algo_overrides"
@@ -273,6 +278,7 @@ run_experiment() {
         actor_rollout_ref.rollout.rollout_filter_strategy="${filter_strategy}" \
         actor_rollout_ref.rollout.rollout_filter_value="${filter_value}" \
         "${common_overrides[@]}" \
+        "${env_overrides[@]}" \
         "${algo_args[@]}" \
         2>&1 | tee "$log_path"
     EXIT_CODE=${PIPESTATUS[0]}

@@ -16,8 +16,8 @@ In `RewardRolloutFilter.split_into_buckets`:
 
 ### 2. Training + Reporting Workflow
 Integrated in `AgentTrainer.fit`:
-1.  **Normal Training**: The actor update always runs on the full batch (no bucketing for the actual weight update).
-2.  **Periodic Reporting**: Every `gradient_analysis_every` steps (default: off), the trainer invokes a separate reporter module.
+1.  **Periodic Reporting (Pre-Update)**: Every `gradient_analysis_every` steps (default: off), the trainer invokes a separate reporter module **before** the weight update.
+2.  **Normal Training**: The actor update always runs on the full batch (no bucketing for the actual weight update).
 3.  **The Probing Loop**: The reporter iterates through each bucket and calls `actor_rollout_wg.update_actor`.
 4.  **No-Update Flag**: Passes `skip_optimizer_step=True` to the actors.
 5.  **Component Breakdown**: The actor performs three backward passes (task, entropy, KL) to compute per-component gradient norms.

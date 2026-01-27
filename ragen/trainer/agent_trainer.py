@@ -929,18 +929,18 @@ class RayAgentTrainer(VerlRayPPOTrainer):
 
                 # implement critic warmup
                 if self.config.trainer.critic_warmup <= self.global_steps:
+                    gradient_analysis_every = self.config.trainer.get("gradient_analysis_every", 0)
+                    if self.config.trainer.get("gradient_analysis_mode", False) and gradient_analysis_every > 0:
+                        if (self.global_steps - 1) % gradient_analysis_every == 0:
+                            with marked_timer("gradient_analysis", timing_raw):
+                                run_gradient_analysis(self, batch, metrics)
+
                     # update actor
                     with marked_timer("update_actor", timing_raw):
                         batch.meta_info["multi_turn"] = True
                         actor_output = self.actor_rollout_wg.update_actor(batch)
                         actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
                         metrics.update(actor_output_metrics)
-
-                    gradient_analysis_every = self.config.trainer.get("gradient_analysis_every", 0)
-                    if self.config.trainer.get("gradient_analysis_mode", False) and gradient_analysis_every > 0:
-                        if (self.global_steps - 1) % gradient_analysis_every == 0:
-                            with marked_timer("gradient_analysis", timing_raw):
-                                run_gradient_analysis(self, batch, metrics)
 
                 # Log rollout generations if enabled
                 rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)

@@ -225,7 +225,7 @@ EXPERIMENTS=("${VALUES[@]}")
 run_experiment() {
     local value="$1"
     local gpu_list="$2"
-    local safe_label="${value//./p}"
+    local safe_label="${value//./}"
     safe_label="${safe_label,,}"
 
     local name="sokoban_entropy_sweep_${safe_label}-${MODEL_NAME}"

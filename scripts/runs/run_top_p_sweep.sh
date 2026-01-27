@@ -216,7 +216,7 @@ run_experiment() {
         include_zero="True"
         filter_value="1.0"
     fi
-    local safe_label="${value//./p}"
+    local safe_label="${value//./}"
     safe_label="${safe_label,,}"
 
     local name="sokoban_top_p_${safe_label}-${MODEL_NAME}"

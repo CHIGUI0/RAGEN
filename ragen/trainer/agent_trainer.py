@@ -54,6 +54,7 @@ from ragen.llm_agent.agent_proxy import LLMAgentProxy
 from ragen.utils import GenerationsLogger
 from ragen.trainer.rollout_filter import build_rollout_filter
 from ragen.trainer.collapse_metrics import CollapseDetector
+from ragen.trainer.gradient_reporter import run_gradient_analysis
 
 from tensordict import TensorDict
 
@@ -465,6 +466,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
             compute_log_prob=self.actor_rollout_wg.compute_log_prob,
             include_zero=getattr(rollout_cfg, "rollout_filter_include_zero", True),
             strategy=getattr(rollout_cfg, "rollout_filter_strategy", "top_p"),
+            bucket_count=getattr(rollout_cfg, "gradient_analysis_num_buckets", 4),
         )
 
         # create collapse detector
@@ -930,68 +932,15 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                     # update actor
                     with marked_timer("update_actor", timing_raw):
                         batch.meta_info["multi_turn"] = True
-                        
-                        # Gradient Analysis Mode logic
-                        if self.config.trainer.get("gradient_analysis_mode", False):
-                            print(f"[Gradient Analysis] Step {self.global_steps}: Running analysis on buckets...")
-                            
-                            # Use filter to create buckets
-                            try:
-                                buckets = self.rollout_filter.split_into_buckets(batch)
-                            except AttributeError:
-                                print("[Gradient Analysis] Rollout filter does not support 'split_into_buckets'. Using default batch.")
-                                buckets = {"all": batch}
-                            
-                            for bucket_name, sub_batch in buckets.items():
-                                count = sub_batch.batch.batch_size[0]
-                                if count == 0:
-                                    print(f"[Gradient Analysis] Bucket '{bucket_name}' is empty. Skipping.")
-                                    continue
-                                
-                                print(f"[Gradient Analysis] Processing bucket '{bucket_name}' with {count} samples.")
-                                
-                                # Update actor with optimizer step SKIPPED (probing only)
-                                sub_batch.meta_info["skip_optimizer_step"] = True
-                                sub_batch.meta_info["grad_component_analysis"] = True
-                                actor_output = self.actor_rollout_wg.update_actor(sub_batch)
-                                bucket_metrics = reduce_metrics(actor_output.meta_info["metrics"])
-                                
-                                # Prefix and merge metrics
-                                for k, v in bucket_metrics.items():
-                                    if k.startswith("actor/grad_norm/"):
-                                        component = k.split("/", 2)[2]
-                                        metrics[f"grad_norm/{bucket_name}/{component}"] = v
-                                    elif k.startswith("actor/loss/"):
-                                        component = k.split("/", 2)[2]
-                                        metrics[f"grad_norm/{bucket_name}/loss/{component}"] = v
-                                    else:
-                                        metrics[f"grad_norm/{bucket_name}/{k}"] = v
-                                    # Also keep original names for "all" bucket to satisfy standard logging
-                                    if bucket_name == "all":
-                                        metrics[k] = v
-                                
-                                # Log to console as requested
-                                # Assuming standard PPO model names: actor/loss/policy, actor/loss/kl, actor/loss/entropy
-                                kl = bucket_metrics.get('actor/loss/kl', 0)
-                                entropy = bucket_metrics.get('actor/loss/entropy', 0)
-                                policy = bucket_metrics.get('actor/loss/policy', 0)
-                                total = bucket_metrics.get('actor/loss/total', 0)
-                                grad_task = bucket_metrics.get('actor/grad_norm/task', 0)
-                                grad_entropy = bucket_metrics.get('actor/grad_norm/entropy', 0)
-                                grad_kl = bucket_metrics.get('actor/grad_norm/kl', 0)
-                                
-                                print(f"[Gradient Analysis] Bucket '{bucket_name}' Metrics:")
-                                print(f"    - KL Loss:      {kl:>10.6f}")
-                                print(f"    - Entropy Loss: {entropy:>10.6f}")
-                                print(f"    - Policy Loss:  {policy:>10.6f} (Task)")
-                                print(f"    - Total Loss:   {total:>10.6f}")
-                                print(f"    - Grad Norms:   task={grad_task:>10.6f} | entropy={grad_entropy:>10.6f} | kl={grad_kl:>10.6f}")
-                                print("")
-                        else:
-                            # Standard update
-                            actor_output = self.actor_rollout_wg.update_actor(batch)
-                            actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
-                            metrics.update(actor_output_metrics)
+                        actor_output = self.actor_rollout_wg.update_actor(batch)
+                        actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
+                        metrics.update(actor_output_metrics)
+
+                    gradient_analysis_every = self.config.trainer.get("gradient_analysis_every", 0)
+                    if self.config.trainer.get("gradient_analysis_mode", False) and gradient_analysis_every > 0:
+                        if self.global_steps % gradient_analysis_every == 0:
+                            with marked_timer("gradient_analysis", timing_raw):
+                                run_gradient_analysis(self, batch, metrics)
 
                 # Log rollout generations if enabled
                 rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)

@@ -22,6 +22,7 @@ class RolloutFilterConfig:
     metric: str = "reward_variance"
     include_zero: bool = True
     strategy: str = "top_p"
+    bucket_count: int = 4
 
 
 class RolloutFilter:
@@ -52,6 +53,10 @@ class RolloutFilter:
     @property
     def num_groups(self) -> int:
         return self.config.num_groups
+
+    @property
+    def bucket_count(self) -> int:
+        return self.config.bucket_count
 
     def _select_top_groups(self, scores: torch.Tensor) -> torch.Tensor:
         # Convert to float for safety with epsilon
@@ -471,8 +476,8 @@ class RewardRolloutFilter(RolloutFilter):
             num_groups = total_samples // group_size
             reward_std_per_group = reward_std.view(num_groups, group_size).mean(dim=1)
 
-        # Equal-percentage buckets: 8 buckets, each ~12.5% of groups (with remainder distributed to early buckets)
-        num_buckets = 8
+        # Equal-percentage buckets (by groups). Remainder is assigned to the last bucket.
+        num_buckets = self.bucket_count
         groups_per_bucket = num_groups // num_buckets
         remainder = num_groups % num_buckets
         sorted_group_ids = torch.argsort(reward_std_per_group)
@@ -481,11 +486,9 @@ class RewardRolloutFilter(RolloutFilter):
         bucket_group_masks = {"all": torch.ones(num_groups, dtype=torch.bool, device=reward_std.device)}
         start = 0
         for i in range(num_buckets):
-            size = groups_per_bucket + (1 if i < remainder else 0)
+            size = groups_per_bucket + (remainder if i == num_buckets - 1 else 0)
             end = start + size
-            pct_start = i * (100.0 / num_buckets)
-            pct_end = (i + 1) * (100.0 / num_buckets)
-            name = f"pct_{pct_start:.1f}_{pct_end:.1f}"
+            name = f"bucket_{i + 1}"
 
             if size == 0:
                 buckets_masks[name] = torch.zeros_like(reward_std, dtype=torch.bool)
@@ -520,9 +523,10 @@ class RewardRolloutFilter(RolloutFilter):
                 
                 try:
                     subset = batch[mask]
-                    result[name] = subset
                 except Exception:
-                    result[name] = batch[mask]
+                    subset = batch[mask]
+                subset.meta_info["bucket_reward_std_mean"] = avg_std
+                result[name] = subset
             else:
                 if name == "all":
                     print(f"{name:<20} | {count:<10} | {0:>10.2f}% | {'N/A':>12}")
@@ -678,6 +682,7 @@ def build_rollout_filter(
     compute_log_prob: Optional[Callable[[DataProto], DataProto]] = None,
     include_zero: bool = True,
     strategy: str = "top_p",
+    bucket_count: int = 4,
 ) -> RolloutFilter:
     metric = (metric or "reward_variance").lower()
     metric = {
@@ -693,6 +698,7 @@ def build_rollout_filter(
         metric=metric,
         include_zero=include_zero,
         strategy=strategy,
+        bucket_count=bucket_count,
     )
 
     if metric == "length":

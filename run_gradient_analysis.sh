@@ -29,8 +29,7 @@ python3 train.py --config-name "_2_sokoban" \
     trainer.save_freq=-1 \
     trainer.test_freq=-1 \
     trainer.total_epochs=1 \
-    trainer.total_training_steps=1 \
-    trainer.total_training_steps=1 \
+    trainer.total_training_steps=11 \
     micro_batch_size_per_gpu=4 \
     ppo_mini_batch_size=32 \
     algorithm.kl_ctrl.kl_coef=0.001 \
@@ -44,4 +43,5 @@ python3 train.py --config-name "_2_sokoban" \
     algorithm.adv_estimator=gae \
     system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\"" \
     trainer.val_before_train=False \
-    +trainer.gradient_analysis_mode=True
+    +trainer.gradient_analysis_mode=True \
+    +trainer.gradient_analysis_every=10

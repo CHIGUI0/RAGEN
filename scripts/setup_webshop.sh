@@ -31,7 +31,8 @@ fi
 # Install remaining requirements
 print_step "Installing additional requirements..."
 # We explicitly install requirements here but skip the webshop recursion in favor of manual handling below
-pip install -r requirements.txt
+# Use --no-build-isolation to ensure flash-attn can find the installed torch
+pip install -r requirements.txt --no-build-isolation
 
 # Install webshop requirements
 print_step "Installing webshop minimal requirements..."

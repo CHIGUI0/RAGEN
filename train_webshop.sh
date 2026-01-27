@@ -1,6 +1,6 @@
 # TEST DIFFERENT CONTEXT WINDOW MODES FOR SOKOBAN
-USE_GRPO_WITH_FILTER="actor_rollout_ref.rollout.rollout_filter_ratio=0.5 algorithm.adv_estimator=grpo"
-USE_PPO_WITH_FILTER="actor_rollout_ref.rollout.rollout_filter_ratio=0.5 algorithm.adv_estimator=gae"
+USE_GRPO_WITH_FILTER="actor_rollout_ref.rollout.rollout_filter_value=0.5 algorithm.adv_estimator=grpo"
+USE_PPO_WITH_FILTER="actor_rollout_ref.rollout.rollout_filter_value=0.5 algorithm.adv_estimator=gae"
 
 USE_FULL="agent_proxy.context_window_mode=full agent_proxy.max_context_window=-1"
 USE_LIMITED_MULTI_TURN="agent_proxy.context_window_mode=limited_multi_turn agent_proxy.max_context_window=3"

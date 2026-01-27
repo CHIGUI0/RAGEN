@@ -48,7 +48,6 @@ class WebShopEnv(BaseLanguageBasedEnv, WebAgentTextEnv):
             num_products=self.config.num_products,
             human_goals=self.config.human_goals,
             show_attrs=self.config.show_attrs,
-            seed=self._seed
         ) if self.config.server is None else self.config.server
 
         WebAgentTextEnv.__init__(

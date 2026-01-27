@@ -12,6 +12,9 @@ TASKS=("sokoban" "frozenlake" "webshop" "metamathqa" "countdown")
 ALGORITHMS=("PPO" "DAPO" "GRPO" "DrGRPO")
 MODEL_PATH=""
 SAVE_FREQ=-1
+FILTER_MODES=("filter" "nofilter")
+FILTERS_OPTION="all"
+SELECTED_FILTERS=("${FILTER_MODES[@]}")
 
 # GPU settings
 GPUS=()
@@ -32,6 +35,7 @@ usage() {
     echo "  --cooldown SECONDS    Cooldown between runs on the same GPU group (default: 30)"
     echo "  --gpu-memory-utilization V  Rollout gpu_memory_utilization (default: 0.3)"
     echo "  --save-freq N         Checkpoint save frequency (default: -1 to disable saving)"
+    echo "  --filters LIST        Comma-separated filter modes (filter,nofilter,all). Default: all"
     echo "  -h, --help            Show this help"
     exit 0
 }
@@ -54,6 +58,8 @@ while [ $# -gt 0 ]; do
         --gpu-memory-utilization=*) GPU_MEMORY_UTILIZATION="${1#*=}"; shift ;;
         --save-freq) SAVE_FREQ="$2"; shift 2 ;;
         --save-freq=*) SAVE_FREQ="${1#*=}"; shift ;;
+        --filters) FILTERS_OPTION="$2"; shift 2 ;;
+        --filters=*) FILTERS_OPTION="${1#*=}"; shift ;;
         -h|--help) usage ;;
         *) echo "Unknown argument: $1"; usage ;;
     esac
@@ -368,7 +374,36 @@ add_experiment() {
     EXPERIMENTS+=("${CURRENT_GROUP}|${task}|${algo}|${filter}|${config}")
 }
 
-FILTERS=("filter" "nofilter")
+resolve_filter_selection() {
+    local raw="$1"
+    if [ -z "$raw" ] || [ "$raw" = "all" ]; then
+        SELECTED_FILTERS=("${FILTER_MODES[@]}")
+        return
+    fi
+    IFS=',' read -r -a candidates <<< "$raw"
+    SELECTED_FILTERS=()
+    for candidate in "${candidates[@]}"; do
+        candidate="${candidate// /}"
+        case "$candidate" in
+            filter|nofilter)
+                SELECTED_FILTERS+=("$candidate")
+                ;;
+            "")
+                continue
+                ;;
+            *)
+                echo "Unknown filter mode: $candidate" >&2
+                exit 1
+                ;;
+        esac
+    done
+    if [ ${#SELECTED_FILTERS[@]} -eq 0 ]; then
+        echo "No valid filters selected via --filters" >&2
+        exit 1
+    fi
+}
+
+resolve_filter_selection "$FILTERS_OPTION"
 
 for algo in "${ALGORITHMS[@]}"; do
     set_group "Algorithm: ${algo}"
@@ -378,7 +413,7 @@ for algo in "${ALGORITHMS[@]}"; do
             echo "Unknown task: $task" >&2
             exit 1
         fi
-        for filter in "${FILTERS[@]}"; do
+        for filter in "${SELECTED_FILTERS[@]}"; do
             add_experiment "$task" "$algo" "$filter" "$config"
         done
     done

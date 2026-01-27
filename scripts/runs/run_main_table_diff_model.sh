@@ -10,6 +10,9 @@ STEPS=400
 MODEL_NAMES=("Qwen2.5-3B-Instruct")
 TASKS=("sokoban" "frozenlake" "webshop" "metamathqa" "countdown")
 SAVE_FREQ=-1
+FILTER_MODES=("filter" "nofilter")
+FILTERS_OPTION="all"
+SELECTED_FILTERS=("${FILTER_MODES[@]}")
 
 # GPU settings
 GPUS=()
@@ -30,6 +33,7 @@ usage() {
     echo "  --cooldown SECONDS    Cooldown between runs on the same GPU group (default: 30)"
     echo "  --gpu-memory-utilization V  Rollout gpu_memory_utilization (default: 0.3)"
     echo "  --save-freq N         Checkpoint save frequency (default: -1 to disable saving)"
+    echo "  --filters LIST        Comma-separated filter modes (filter,nofilter,all). Default: all"
     echo "  -h, --help            Show this help"
     exit 0
 }
@@ -52,6 +56,8 @@ while [ $# -gt 0 ]; do
         --gpu-memory-utilization=*) GPU_MEMORY_UTILIZATION="${1#*=}"; shift ;;
         --save-freq) SAVE_FREQ="$2"; shift 2 ;;
         --save-freq=*) SAVE_FREQ="${1#*=}"; shift ;;
+        --filters) FILTERS_OPTION="$2"; shift 2 ;;
+        --filters=*) FILTERS_OPTION="${1#*=}"; shift ;;
         -h|--help) usage ;;
         *) echo "Unknown argument: $1"; usage ;;
     esac
@@ -343,6 +349,35 @@ EXPERIMENTS=()
 GROUP_LABELS=()
 CURRENT_GROUP=""
 
+resolve_filter_selection() {
+    local raw="$1"
+    if [ -z "$raw" ] || [ "$raw" = "all" ]; then
+        SELECTED_FILTERS=("${FILTER_MODES[@]}")
+        return
+    fi
+    IFS=',' read -r -a candidates <<< "$raw"
+    SELECTED_FILTERS=()
+    for candidate in "${candidates[@]}"; do
+        candidate="${candidate// /}"
+        case "$candidate" in
+            filter|nofilter)
+                SELECTED_FILTERS+=("$candidate")
+                ;;
+            "")
+                continue
+                ;;
+            *)
+                echo "Unknown filter mode: $candidate" >&2
+                exit 1
+                ;;
+        esac
+    done
+    if [ ${#SELECTED_FILTERS[@]} -eq 0 ]; then
+        echo "No valid filters selected via --filters" >&2
+        exit 1
+    fi
+}
+
 set_group() {
     CURRENT_GROUP="$1"
     GROUP_LABELS+=("$1")
@@ -356,7 +391,7 @@ add_experiment() {
     EXPERIMENTS+=("${CURRENT_GROUP}|${task}|${model_name}|${filter}|${config}")
 }
 
-FILTERS=("filter" "nofilter")
+resolve_filter_selection "$FILTERS_OPTION"
 
 for model_name in "${MODEL_NAMES[@]}"; do
     set_group "Model: ${model_name}"
@@ -366,7 +401,7 @@ for model_name in "${MODEL_NAMES[@]}"; do
             echo "Unknown task: $task" >&2
             exit 1
         fi
-        for filter in "${FILTERS[@]}"; do
+        for filter in "${SELECTED_FILTERS[@]}"; do
             add_experiment "$task" "$model_name" "$filter" "$config"
         done
     done

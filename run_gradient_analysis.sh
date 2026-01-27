@@ -29,7 +29,7 @@ python3 train.py --config-name "_2_sokoban" \
     trainer.save_freq=-1 \
     trainer.test_freq=-1 \
     trainer.total_epochs=1 \
-    trainer.total_training_steps=11 \
+    trainer.total_training_steps=61 \
     micro_batch_size_per_gpu=4 \
     ppo_mini_batch_size=32 \
     algorithm.kl_ctrl.kl_coef=0.001 \

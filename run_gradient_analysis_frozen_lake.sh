@@ -35,9 +35,9 @@ python3 train.py --config-name "_3_frozen_lake" \
     algorithm.kl_ctrl.kl_coef=0.001 \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
     actor_rollout_ref.actor.use_kl_loss=True \
-    es_manager.train.env_groups=8 \
-    es_manager.train.group_size=16 \
-    es_manager.train.env_configs.n_groups=[8] \
+    es_manager.train.env_groups=256 \
+    es_manager.train.group_size=32 \
+    es_manager.train.env_configs.n_groups=[256] \
     custom_envs.CoordFrozenLake.env_config.success_rate="1.0" \
     trainer.default_local_dir="/mnt/permanent/xjin/20260126_frozen_lake_grid/gradient_analysis_frozen_lake_3b" \
     model_path=Qwen/Qwen2.5-3B-Instruct \

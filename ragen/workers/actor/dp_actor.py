@@ -391,6 +391,8 @@ class DataParallelPPOActor(BasePPOActor):
                                     loss_metrics["actor/loss/kl"] = kl_term.detach().item()
                                 loss_metrics["actor/loss/total"] = total_loss.detach().item()
                                 append_to_dict(metrics, loss_metrics)
+                            else:
+                                append_to_dict(metrics, {f"actor/loss/{component}": component_loss.detach().item()})
 
                         grad_norm = self._optimizer_step(skip_step=True)
                         append_to_dict(metrics, {f"actor/grad_norm/{component}": grad_norm.detach().item()})

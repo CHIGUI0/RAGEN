@@ -446,22 +446,64 @@ class RewardRolloutFilter(RolloutFilter):
              raise ValueError("Batch must have 'reward_std' to split into buckets.")
         
         reward_std = batch.batch["reward_std"]
-        
-        # Define buckets based on user request:
-        # [0-0.2], [0.2-0.5], [0.5-1], [1-2], [2-3], [3-5], [5+]
-        buckets_masks = {
-            "all": torch.ones_like(reward_std, dtype=torch.bool),
-            "var_0_0.2": (reward_std >= 0) & (reward_std < 0.2),
-            "var_0.2_0.5": (reward_std >= 0.2) & (reward_std < 0.5),
-            "var_0.5_1.0": (reward_std >= 0.5) & (reward_std < 1.0),
-            "var_1.0_2.0": (reward_std >= 1.0) & (reward_std < 2.0),
-            "var_2.0_3.0": (reward_std >= 2.0) & (reward_std < 3.0),
-            "var_3.0_5.0": (reward_std >= 3.0) & (reward_std < 5.0),
-            "var_5.0_plus": (reward_std >= 5.0)
-        }
-        
-        result = {}
+
         total_samples = reward_std.numel()
+        if batch.non_tensor_batch is not None and "group_ids" in batch.non_tensor_batch:
+            group_ids = batch.non_tensor_batch["group_ids"]
+            if not torch.is_tensor(group_ids):
+                group_ids = torch.tensor(group_ids, device=reward_std.device)
+            else:
+                group_ids = group_ids.to(reward_std.device)
+
+            unique_group_ids, inverse = torch.unique(group_ids, sorted=True, return_inverse=True)
+            num_groups = unique_group_ids.numel()
+            reward_std_per_group = torch.zeros(num_groups, device=reward_std.device)
+            counts = torch.zeros(num_groups, device=reward_std.device)
+            reward_std_per_group.scatter_add_(0, inverse, reward_std)
+            counts.scatter_add_(0, inverse, torch.ones_like(reward_std))
+            reward_std_per_group = reward_std_per_group / counts.clamp_min(1)
+        else:
+            group_size = self.group_size
+            if total_samples % group_size != 0:
+                raise ValueError(
+                    f"Batch size ({total_samples}) must be divisible by group_size ({group_size}) for bucketization."
+                )
+            num_groups = total_samples // group_size
+            reward_std_per_group = reward_std.view(num_groups, group_size).mean(dim=1)
+
+        # Equal-percentage buckets: 8 buckets, each ~12.5% of groups (with remainder distributed to early buckets)
+        num_buckets = 8
+        groups_per_bucket = num_groups // num_buckets
+        remainder = num_groups % num_buckets
+        sorted_group_ids = torch.argsort(reward_std_per_group)
+
+        buckets_masks = {"all": torch.ones_like(reward_std, dtype=torch.bool)}
+        bucket_group_masks = {"all": torch.ones(num_groups, dtype=torch.bool, device=reward_std.device)}
+        start = 0
+        for i in range(num_buckets):
+            size = groups_per_bucket + (1 if i < remainder else 0)
+            end = start + size
+            pct_start = i * (100.0 / num_buckets)
+            pct_end = (i + 1) * (100.0 / num_buckets)
+            name = f"pct_{pct_start:.1f}_{pct_end:.1f}"
+
+            if size == 0:
+                buckets_masks[name] = torch.zeros_like(reward_std, dtype=torch.bool)
+                bucket_group_masks[name] = torch.zeros(num_groups, dtype=torch.bool, device=reward_std.device)
+                continue
+
+            group_ids = sorted_group_ids[start:end]
+            group_mask = torch.zeros(num_groups, dtype=torch.bool, device=reward_std.device)
+            group_mask[group_ids] = True
+            if batch.non_tensor_batch is not None and "group_ids" in batch.non_tensor_batch:
+                sample_mask = group_mask[inverse]
+            else:
+                sample_mask = group_mask.unsqueeze(1).expand(-1, group_size).reshape(-1)
+            buckets_masks[name] = sample_mask
+            bucket_group_masks[name] = group_mask
+            start = end
+
+        result = {}
         
         print(f"\n[Gradient Analysis] Bucket Distribution (Total Samples: {total_samples})")
         print("-" * 80)
@@ -472,7 +514,8 @@ class RewardRolloutFilter(RolloutFilter):
             count = mask.sum().item()
             if count > 0:
                 percentage = (count / total_samples) * 100
-                avg_std = reward_std[mask].mean().item()
+                group_mask = bucket_group_masks[name]
+                avg_std = reward_std_per_group[group_mask].mean().item()
                 print(f"{name:<20} | {count:<10} | {percentage:>10.2f}% | {avg_std:>12.4f}")
                 
                 try:

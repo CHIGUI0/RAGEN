@@ -3,13 +3,14 @@
 This document details the implementation of reward-variance-based gradient analysis in the RAGEN framework.
 
 ## Overview
-The feature allows for disaggregated gradient analysis across reward variance buckets during PPO training. It enables probing the model's response to specific trajectory types without updating weights. It now supports **component-level gradient norms** (task, entropy, KL) computed per bucket.
+The feature allows for disaggregated gradient analysis across reward-variance **percentile buckets** during PPO training. It enables probing the model's response to specific trajectory types without updating weights. It now supports **component-level gradient norms** (task, entropy, KL) computed per bucket.
 
 ## Implementation Details
 
 ### 1. Bucket Selection
 In `RewardRolloutFilter.split_into_buckets`:
-- **Buckets**: `[0-0.2], [0.2-0.5], [0.5-1], [1-2], [2-3], [3-5], [5+]`
+- **Buckets**: 8 equal-percentage buckets (12.5% each) over **groups**, sorted by group-level `reward_std`.
+- **Bucket names**: `pct_0.0_12.5`, `pct_12.5_25.0`, ..., `pct_87.5_100.0`
 - Uses the `reward_std` computed during rollout filtering.
 
 ### 2. Analysis Workflow
@@ -27,6 +28,7 @@ In `DataParallelPPOActor._optimizer_step`:
 In `DataParallelPPOActor._update_policy_grad_components` (local actor implementation):
 - Performs three backward passes per mini-batch (task / entropy / KL).
 - Logs component norms under `actor/grad_norm/{task|entropy|kl}`.
+  - Component losses are logged in their own pass under `actor/loss/{entropy|kl}`.
 
 ### 4. FSDP & Environment Compatibility
 In `fsdp_workers.py`:
@@ -39,7 +41,7 @@ Run the analysis using the following flag:
 ```bash
 python3 train.py ... +trainer.gradient_analysis_mode=True
 ```
-Metrics will be logged to WandB and the console under `grad_norm/var_{range}/`.
+Metrics will be logged to WandB and the console under `grad_norm/<bucket>/`.
 
 Component metrics are logged per bucket:
 - `grad_norm/<bucket>/task`

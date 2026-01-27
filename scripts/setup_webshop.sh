@@ -28,6 +28,45 @@ else
 fi
 
 
+# Function to check if CUDA is available
+check_cuda() {
+    if command -v nvidia-smi &> /dev/null; then
+        echo "CUDA GPU detected"
+        return 0
+    else
+        echo "No CUDA GPU detected"
+        return 1
+    fi
+}
+
+# Check if checking CUDA is needed
+if check_cuda; then
+    print_step "CUDA detected, checking CUDA version..."
+    
+    if command -v nvcc &> /dev/null; then
+        nvcc_version=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2-)
+        nvcc_major=$(echo $nvcc_version | cut -d. -f1)
+        nvcc_minor=$(echo $nvcc_version | cut -d. -f2)
+        
+        print_step "Found NVCC version: $nvcc_version"
+        
+        if [[ "$nvcc_major" -gt 12 || ("$nvcc_major" -eq 12 && "$nvcc_minor" -ge 1) ]]; then
+            print_step "CUDA $nvcc_version is already installed and meets requirements (>=12.4)"
+            export CUDA_HOME=${CUDA_HOME:-$(dirname $(dirname $(which nvcc)))}
+        else
+            print_step "CUDA version < 12.4, installing CUDA toolkit 12.4..."
+            conda install -c "nvidia/label/cuda-12.4.0" cuda-toolkit -y
+            export CUDA_HOME=$CONDA_PREFIX
+        fi
+    else
+        print_step "NVCC not found, installing CUDA toolkit 12.4..."
+        conda install -c "nvidia/label/cuda-12.4.0" cuda-toolkit -y
+        export CUDA_HOME=$CONDA_PREFIX
+    fi
+else
+    print_step "No CUDA GPU detected, skipping CUDA setup..."
+fi
+
 # Install remaining requirements
 print_step "Installing additional requirements..."
 # We explicitly install requirements here but skip the webshop recursion in favor of manual handling below

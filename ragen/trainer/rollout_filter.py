@@ -525,6 +525,7 @@ class RewardRolloutFilter(RolloutFilter):
                     subset = batch[mask]
                 except Exception:
                     subset = batch[mask]
+                subset.meta_info = dict(subset.meta_info or {})
                 subset.meta_info["bucket_reward_std_mean"] = avg_std
                 result[name] = subset
             else:

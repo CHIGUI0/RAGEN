@@ -17,15 +17,34 @@ print_step() {
 }
 
 # Main installation process
-# TODO: merge this with the main setup script with an option to install webshop
-# Install if you want to use webshop
-sudo apt update
-sudo apt install default-jdk -y
-conda install -c conda-forge openjdk=21 maven -y
+# Check if conda is available
+if command -v conda &> /dev/null; then
+    # Need to source conda for script environment
+    eval "$(conda shell.bash hook)"
+    print_step "Activating conda environment 'ragen'..."
+    conda activate ragen
+else
+    echo -e "${GREEN}Conda not found, assuming python environment is already set up...${NC}"
+fi
+
 
 # Install remaining requirements
 print_step "Installing additional requirements..."
+# We explicitly install requirements here but skip the webshop recursion in favor of manual handling below
 pip install -r requirements.txt
+
+# Install webshop requirements
+print_step "Installing webshop minimal requirements..."
+# Pyserini installs torch by default which overrides our optimized torch.
+# We install it without dependencies, then install its non-conflicting dependencies manually.
+pip install pyserini --no-dependencies
+
+# Install other requirements for webshop, excluding pyserini which we just installed
+if [ -f "external/webshop-minimal/requirements.txt" ]; then
+    grep -v "pyserini" external/webshop-minimal/requirements.txt | pip install -r /dev/stdin
+else
+    echo "Warning: external/webshop-minimal/requirements.txt not found!"
+fi
 
 # webshop installation, model loading
 pip install -e external/webshop-minimal/ --no-dependencies

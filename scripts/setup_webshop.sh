@@ -67,6 +67,9 @@ else
     print_step "No CUDA GPU detected, skipping CUDA setup..."
 fi
 
+# Export CXXFLAGS to enforce old ABI compatibility with PyTorch
+export CXXFLAGS="${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=0"
+
 # Install remaining requirements
 print_step "Installing additional requirements..."
 # We explicitly install requirements here but skip the webshop recursion in favor of manual handling below

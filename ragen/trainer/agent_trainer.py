@@ -938,7 +938,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
 
                     gradient_analysis_every = self.config.trainer.get("gradient_analysis_every", 0)
                     if self.config.trainer.get("gradient_analysis_mode", False) and gradient_analysis_every > 0:
-                        if self.global_steps % gradient_analysis_every == 0:
+                        if (self.global_steps - 1) % gradient_analysis_every == 0:
                             with marked_timer("gradient_analysis", timing_raw):
                                 run_gradient_analysis(self, batch, metrics)
 

@@ -56,7 +56,7 @@ python3 train.py ... +trainer.gradient_analysis_mode=True +trainer.gradient_anal
 Optional flags:
 - `+actor_rollout_ref.rollout.gradient_analysis_num_buckets=4`
 
-`gradient_analysis_every` controls the reporting cadence (default: off). Reporting runs on steps where `global_steps % gradient_analysis_every == 0`.
+`gradient_analysis_every` controls the reporting cadence (default: off). Reporting runs on steps where `(global_steps - 1) % gradient_analysis_every == 0` (i.e., it triggers at step 1).
 Metrics will be logged to WandB and the console under `grad_norm/<bucket>/`.
 
 Component metrics are logged per bucket:

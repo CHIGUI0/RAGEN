@@ -22,6 +22,7 @@ Integrated in `AgentTrainer.fit`:
 4.  **No-Update Flag**: Passes `skip_optimizer_step=True` to the actors.
 5.  **Component Breakdown**: The actor performs three backward passes (task, entropy, KL) to compute per-component gradient norms.
 6.  **Normalized Metrics**: Per-bucket grad norms are also reported per-sample and per-token.
+7.  **DP-Safe Buckets**: If a bucket size is not divisible by `n_gpus_per_node`, the remainder is dropped to avoid uneven sharding.
 
 ### 3. Non-Destructive Actor Updates
 In `DataParallelPPOActor._optimizer_step` (reporting path only):

@@ -35,6 +35,19 @@ def run_gradient_analysis(trainer, batch, metrics):
         if count == 0:
             print(f"[Gradient Analysis] Bucket '{bucket_name}' is empty. Skipping.")
             continue
+        dp_size = int(getattr(trainer.config.trainer, "n_gpus_per_node", 1))
+        if dp_size > 1 and count % dp_size != 0:
+            new_count = count - (count % dp_size)
+            if new_count == 0:
+                print(
+                    f\"[Gradient Analysis] Bucket '{bucket_name}' size {count} not divisible by dp_size={dp_size}. Skipping.\"
+                )
+                continue
+            print(
+                f\"[Gradient Analysis] Bucket '{bucket_name}' size {count} not divisible by dp_size={dp_size}. Dropping to {new_count}.\"
+            )
+            sub_batch = sub_batch.slice(0, new_count)
+            count = new_count
 
         print(f"[Gradient Analysis] Processing bucket '{bucket_name}' with {count} samples.")
 

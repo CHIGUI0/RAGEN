@@ -48,8 +48,17 @@ def run_gradient_analysis(trainer, batch, metrics):
         reward_std_mean = sub_batch.meta_info.get("bucket_reward_std_mean", None)
         if reward_std_mean is None and "reward_std" in sub_batch.batch:
             reward_std_mean = sub_batch.batch["reward_std"].mean().item()
+        reward_std_min = None
+        reward_std_max = None
+        if "reward_std" in sub_batch.batch:
+            reward_std_min = sub_batch.batch["reward_std"].min().item()
+            reward_std_max = sub_batch.batch["reward_std"].max().item()
         if reward_std_mean is not None:
             metrics[f"grad_norm/{bucket_name}/reward_std_mean"] = reward_std_mean
+        if reward_std_min is not None:
+            metrics[f"grad_norm/{bucket_name}/reward_std_min"] = reward_std_min
+        if reward_std_max is not None:
+            metrics[f"grad_norm/{bucket_name}/reward_std_max"] = reward_std_max
 
         num_tokens = None
         if "response_mask" in sub_batch.batch:
@@ -86,4 +95,11 @@ def run_gradient_analysis(trainer, batch, metrics):
         print(
             f"    - Grad Norms:   task={grad_task:>10.6f} | entropy={grad_entropy:>10.6f} | kl={grad_kl:>10.6f}"
         )
+        if reward_std_mean is not None:
+            if reward_std_min is not None and reward_std_max is not None:
+                print(
+                    f"    - Reward Std:   mean={reward_std_mean:>10.6f} | min={reward_std_min:>10.6f} | max={reward_std_max:>10.6f}"
+                )
+            else:
+                print(f"    - Reward Std:   mean={reward_std_mean:>10.6f}")
         print("")

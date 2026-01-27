@@ -9,6 +9,10 @@ BUCKETS = [
     "bucket_2",
     "bucket_3",
     "bucket_4",
+    "bucket_5",
+    "bucket_6",
+    "bucket_7",
+    "bucket_8",
 ]
 COMPONENTS = ["kl", "entropy", "task"]
 LOSS_COMPONENTS = ["policy", "entropy", "kl", "total"]

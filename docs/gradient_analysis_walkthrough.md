@@ -9,8 +9,8 @@ The feature allows for disaggregated gradient analysis across reward-variance **
 
 ### 1. Bucket Selection
 In `RewardRolloutFilter.split_into_buckets`:
-- **Buckets**: configurable via `gradient_analysis_num_buckets` (default: 4) over **groups**, sorted by group-level `reward_std`.
-- **Bucket names**: `bucket_1`, `bucket_2`, `bucket_3`, `bucket_4` (when using 4 buckets), ordered low → high reward variance.
+- **Buckets**: configurable via `gradient_analysis_num_buckets` (default: 8) over **groups**, sorted by group-level `reward_std`.
+- **Bucket names**: `bucket_1` ... `bucket_8` (when using 8 buckets), ordered low → high reward variance.
 - Uses the `reward_std` computed during rollout filtering.
 - **Remainder Handling**: if groups don't divide evenly, the remainder is assigned to the **last (highest RV)** bucket so early buckets have equal group counts.
 
@@ -39,6 +39,8 @@ In `ragen/trainer/gradient_reporter.py`:
 - Runs only on reporting steps; it never replaces the normal actor update.
 - Logs extra metrics:
   - `grad_norm/<bucket>/reward_std_mean`
+  - `grad_norm/<bucket>/reward_std_min`
+  - `grad_norm/<bucket>/reward_std_max`
   - `grad_norm/<bucket>/per_sample/<component>`
   - `grad_norm/<bucket>/per_token/<component>`
 
@@ -54,7 +56,7 @@ Run the analysis using the following flags:
 python3 train.py ... +trainer.gradient_analysis_mode=True +trainer.gradient_analysis_every=10
 ```
 Optional flags:
-- `+actor_rollout_ref.rollout.gradient_analysis_num_buckets=4`
+- `+actor_rollout_ref.rollout.gradient_analysis_num_buckets=8`
 
 `gradient_analysis_every` controls the reporting cadence (default: off). Reporting runs on steps where `(global_steps - 1) % gradient_analysis_every == 0` (i.e., it triggers at step 1).
 Metrics will be logged to WandB and the console under `grad_norm/<bucket>/`.
@@ -67,6 +69,8 @@ Component metrics are logged per bucket:
 - `grad_norm/<bucket>/per_sample/{task|entropy|kl}`
 - `grad_norm/<bucket>/per_token/{task|entropy|kl}`
 - `grad_norm/<bucket>/reward_std_mean`
+- `grad_norm/<bucket>/reward_std_min`
+- `grad_norm/<bucket>/reward_std_max`
 
 ---
 **Date**: 2026-01-27

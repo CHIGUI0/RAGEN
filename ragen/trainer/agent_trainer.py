@@ -466,7 +466,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
             compute_log_prob=self.actor_rollout_wg.compute_log_prob,
             include_zero=getattr(rollout_cfg, "rollout_filter_include_zero", True),
             strategy=getattr(rollout_cfg, "rollout_filter_strategy", "top_p"),
-            bucket_count=getattr(rollout_cfg, "gradient_analysis_num_buckets", 4),
+            bucket_count=getattr(rollout_cfg, "gradient_analysis_num_buckets", 8),
         )
 
         # create collapse detector

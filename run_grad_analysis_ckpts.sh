@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Run gradient analysis for 1 step on each saved checkpoint.
-# Usage: bash run_grad_analysis_ckpts.sh /path/to/output_dir
+# Usage: bash run_grad_analysis_ckpts.sh /path/to/output_dir [algo] [gpu_csv] [gpus_per_exp]
 
 # -----------------------
 # GPU AUTO-DETECTION
@@ -22,20 +22,20 @@ if [ "$TOTAL_GPUS" -eq 0 ]; then
 fi
 echo "INFO: Detected $TOTAL_GPUS GPUs."
 
-GPU_CSV=$(seq -s, 0 $((TOTAL_GPUS - 1)))
-
 # -----------------------
 # Inputs
 # -----------------------
 OUTPUT_DIR="${1:-/mnt/permanent/xjin/20260126_filters_final/gradient_analysis_ckpt_sokoban_3b}"
+ALGO="${2:-grpo}"
+GPU_CSV="${3:-0,1,2,3}"
+GPUS_PER_EXP="${4:-4}"
 ENV="_2_sokoban"
-EXP_NAME="gradient_analysis_ckpt_sokoban_3b"
+EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_${ALGO}"
 MODEL_PATH="Qwen/Qwen2.5-3B"
 
 COMMON_FLAGS=(
   trainer.project_name=AGEN_gradient_analysis
-  trainer.experiment_name="${EXP_NAME}"
-  trainer.n_gpus_per_node="${TOTAL_GPUS}"
+  trainer.n_gpus_per_node="${GPUS_PER_EXP}"
   trainer.nnodes=1
   micro_batch_size_per_gpu=4
   ppo_mini_batch_size=32
@@ -47,11 +47,25 @@ COMMON_FLAGS=(
   es_manager.train.env_configs.n_groups=[256]
   trainer.default_local_dir="${OUTPUT_DIR}"
   model_path="${MODEL_PATH}"
-  algorithm.adv_estimator=gae
+  algorithm.adv_estimator=grpo
   actor_rollout_ref.rollout.rollout_filter_value=1.0
+  actor_rollout_ref.rollout.gradient_analysis_bucket_mode=fixed_rv
   system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\""
   trainer.val_before_train=False
 )
+
+case "$ALGO" in
+  grpo)
+    COMMON_FLAGS+=(algorithm.norm_adv_by_std_in_grpo=true actor_rollout_ref.actor.loss_agg_mode=seq-mean-token-mean)
+    ;;
+  drgrpo)
+    COMMON_FLAGS+=(algorithm.norm_adv_by_std_in_grpo=false actor_rollout_ref.actor.loss_agg_mode=seq-mean-token-sum)
+    ;;
+  *)
+    echo "ERROR: Unknown algo '$ALGO'. Use grpo or drgrpo." >&2
+    exit 1
+    ;;
+esac
 
 for step in 10 20 30 40 50; do
   CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
@@ -59,6 +73,8 @@ for step in 10 20 30 40 50; do
     echo "WARN: missing checkpoint at $CKPT_DIR, skipping"
     continue
   fi
+
+  EXP_NAME="${EXP_NAME_BASE}_step${step}"
 
   python3 train.py --config-name "${ENV}" \
     trainer.total_epochs=1 \
@@ -69,6 +85,7 @@ for step in 10 20 30 40 50; do
     trainer.resume_from_path="${CKPT_DIR}" \
     +trainer.gradient_analysis_mode=True \
     +trainer.gradient_analysis_every=1 \
+    trainer.experiment_name="${EXP_NAME}" \
     "${COMMON_FLAGS[@]}"
 
 done

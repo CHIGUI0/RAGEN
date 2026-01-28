@@ -61,6 +61,8 @@ actor_rollout_ref:
     rollout_filter_type: largest # smallest or largest
     rollout_filter_include_zero: True # whether to include groups with 0 score in the filtering
     rollout_filter_metric: reward_variance
+    gradient_analysis_num_buckets: 8
+    gradient_analysis_bucket_mode: quantile # quantile | fixed_rv
     enforce_eager: True #  for small models, set both enforce_eager and free_cache_engine to False to make rollout faster
     free_cache_engine: True
     val_kwargs:

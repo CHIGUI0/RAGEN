@@ -42,6 +42,7 @@ python3 train.py --config-name "_2_sokoban" \
     model_path=Qwen/Qwen2.5-3B \
     algorithm.adv_estimator=gae \
     actor_rollout_ref.rollout.rollout_filter_value=1.0 \
+    actor_rollout_ref.rollout.gradient_analysis_bucket_mode=fixed_rv \
     system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\"" \
     trainer.val_before_train=False \
     +trainer.gradient_analysis_mode=True \

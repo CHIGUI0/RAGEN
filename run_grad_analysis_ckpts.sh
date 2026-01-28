@@ -25,10 +25,18 @@ echo "INFO: Detected $TOTAL_GPUS GPUs."
 # -----------------------
 # Inputs
 # -----------------------
-OUTPUT_DIR="${1:-/mnt/permanent/xjin/20260126_filters_final/gradient_analysis_ckpt_sokoban_3b}"
-ALGO="${2:-grpo}"
-GPU_CSV="${3:-0,1,2,3}"
-GPUS_PER_EXP="${4:-4}"
+DEFAULT_BASE="/mnt/permanent/xjin/20260126_filters_final"
+if [ "${1:-}" = "grpo" ] || [ "${1:-}" = "drgrpo" ]; then
+  ALGO="$1"
+  OUTPUT_DIR="${DEFAULT_BASE}/gradient_analysis_ckpt_sokoban_3b_${ALGO}"
+  GPU_CSV="${2:-0,1,2,3}"
+  GPUS_PER_EXP="${3:-4}"
+else
+  OUTPUT_DIR="${1:-${DEFAULT_BASE}/gradient_analysis_ckpt_sokoban_3b_grpo}"
+  ALGO="${2:-grpo}"
+  GPU_CSV="${3:-0,1,2,3}"
+  GPUS_PER_EXP="${4:-4}"
+fi
 ENV="_2_sokoban"
 EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_${ALGO}"
 MODEL_PATH="Qwen/Qwen2.5-3B"
@@ -67,7 +75,7 @@ case "$ALGO" in
     ;;
 esac
 
-for step in 10 20 30 40 50; do
+for step in 10 50; do
   CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
   if [ ! -d "$CKPT_DIR" ]; then
     echo "WARN: missing checkpoint at $CKPT_DIR, skipping"

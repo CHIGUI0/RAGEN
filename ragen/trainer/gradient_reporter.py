@@ -51,6 +51,11 @@ def run_gradient_analysis(trainer, batch, metrics):
 
         print(f"[Gradient Analysis] Processing bucket '{bucket_name}' with {count} samples.")
 
+        total_samples = batch.batch.batch_size[0]
+        metrics[f"grad_norm/{bucket_name}/sample_count"] = count
+        if total_samples > 0:
+            metrics[f"grad_norm/{bucket_name}/sample_pct"] = count / total_samples
+
         with _set_meta_flag(sub_batch.meta_info, "skip_optimizer_step", True), _set_meta_flag(
             sub_batch.meta_info, "grad_component_analysis", True
         ):
@@ -59,6 +64,8 @@ def run_gradient_analysis(trainer, batch, metrics):
         bucket_metrics = reduce_metrics(actor_output.meta_info["metrics"])
 
         reward_std_mean = sub_batch.meta_info.get("bucket_reward_std_mean", None)
+        bucket_reward_std_values = sub_batch.meta_info.get("bucket_reward_std_values", None)
+        bucket_group_ids = sub_batch.meta_info.get("bucket_group_ids", None)
         if reward_std_mean is None and "reward_std" in sub_batch.batch:
             reward_std_mean = sub_batch.batch["reward_std"].mean().item()
         reward_std_min = None
@@ -72,6 +79,17 @@ def run_gradient_analysis(trainer, batch, metrics):
             metrics[f"grad_norm/{bucket_name}/reward_std_min"] = reward_std_min
         if reward_std_max is not None:
             metrics[f"grad_norm/{bucket_name}/reward_std_max"] = reward_std_max
+        if bucket_reward_std_values is not None and bucket_group_ids is not None:
+            metrics[f"grad_norm/{bucket_name}/group_rv_count"] = len(bucket_reward_std_values)
+            try:
+                import wandb  # local import to avoid hard dependency if wandb disabled
+
+                table = wandb.Table(columns=["bucket", "group_id", "reward_std"])
+                for gid, rv in zip(bucket_group_ids, bucket_reward_std_values):
+                    table.add_data(bucket_name, int(gid), float(rv))
+                metrics[f"grad_norm/{bucket_name}/group_rv_table"] = table
+            except Exception:
+                pass
 
         num_tokens = None
         if "response_mask" in sub_batch.batch:

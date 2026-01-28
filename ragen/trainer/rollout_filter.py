@@ -519,6 +519,11 @@ class RewardRolloutFilter(RolloutFilter):
                 percentage = (count / total_samples) * 100
                 group_mask = bucket_group_masks[name]
                 avg_std = reward_std_per_group[group_mask].mean().item()
+                bucket_rv_values = reward_std_per_group[group_ids].detach().cpu().tolist()
+                if batch.non_tensor_batch is not None and "group_ids" in batch.non_tensor_batch:
+                    bucket_group_ids = unique_group_ids[group_ids].detach().cpu().tolist()
+                else:
+                    bucket_group_ids = group_ids.detach().cpu().tolist()
                 print(f"{name:<20} | {count:<10} | {percentage:>10.2f}% | {avg_std:>12.4f}")
                 
                 try:
@@ -527,6 +532,8 @@ class RewardRolloutFilter(RolloutFilter):
                     subset = batch[mask]
                 subset.meta_info = dict(subset.meta_info or {})
                 subset.meta_info["bucket_reward_std_mean"] = avg_std
+                subset.meta_info["bucket_reward_std_values"] = bucket_rv_values
+                subset.meta_info["bucket_group_ids"] = bucket_group_ids
                 result[name] = subset
             else:
                 if name == "all":

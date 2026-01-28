@@ -57,5 +57,4 @@ python3 train.py --config-name "${ENV}" \
   trainer.total_epochs=1 \
   trainer.total_training_steps=50 \
   trainer.save_freq=10 \
-  trainer.test_freq=-1 \
   "${COMMON_FLAGS[@]}"

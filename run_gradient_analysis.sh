@@ -35,9 +35,9 @@ python3 train.py --config-name "_2_sokoban" \
     algorithm.kl_ctrl.kl_coef=0.001 \
     actor_rollout_ref.actor.kl_loss_coef=0.001 \
     actor_rollout_ref.actor.use_kl_loss=True \
-    es_manager.train.env_groups=256 \
-    es_manager.train.group_size=32 \
-    es_manager.train.env_configs.n_groups=[256] \
+    es_manager.train.env_groups=32 \
+    es_manager.train.group_size=16 \
+    es_manager.train.env_configs.n_groups=[32] \
     trainer.default_local_dir="/mnt/permanent/xjin/20260126_filters_final/gradient_analysis_sokoban_3b" \
     model_path=Qwen/Qwen2.5-3B \
     algorithm.adv_estimator=gae \

@@ -6,7 +6,7 @@ set -euo pipefail
 STEPS=400
 MODEL_NAME="Qwen2.5-3B"
 MODEL_PATH="Qwen/${MODEL_NAME}"
-PROJECT_NAME="ragen_top_p_sweep"
+PROJECT_NAME="ragen_new_top_p_sweep"
 CONFIG_NAME="_2_sokoban"
 SAVE_FREQ=-1
 ROLL_FILTER_VALUES="1.0,0.98,0.95,0.9,0.8,0.6,0.4,nofilter"

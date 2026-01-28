@@ -6,7 +6,7 @@ set -euo pipefail
 STEPS=400
 MODEL_NAME="Qwen2.5-3B"
 MODEL_PATH="Qwen/${MODEL_NAME}"
-PROJECT_NAME="ragen_entropy_sweep"
+PROJECT_NAME="ragen_new_entropy_sweep"
 CONFIG_NAME="_2_sokoban"
 SAVE_FREQ=-1
 ENTROPY_VALUES="0,0.001,0.003,0.01,0.03,0.1"

@@ -30,6 +30,29 @@ ENV="_2_sokoban"
 EXP_NAME="gradient_analysis_ckpt_sokoban_3b"
 OUTPUT_DIR="/mnt/permanent/xjin/20260126_filters_final/${EXP_NAME}"
 MODEL_PATH="Qwen/Qwen2.5-3B"
+ALGO="${1:-ppo}"
+
+case "$ALGO" in
+  ppo)
+    ADV_ESTIMATOR="gae"
+    NORM_ADV_BY_STD_IN_GRPO="true"
+    LOSS_AGG_MODE="seq-mean-token-mean"
+    ;;
+  grpo)
+    ADV_ESTIMATOR="grpo"
+    NORM_ADV_BY_STD_IN_GRPO="true"
+    LOSS_AGG_MODE="seq-mean-token-mean"
+    ;;
+  drgrpo)
+    ADV_ESTIMATOR="grpo"
+    NORM_ADV_BY_STD_IN_GRPO="false"
+    LOSS_AGG_MODE="seq-mean-token-sum"
+    ;;
+  *)
+    echo "ERROR: Unknown algo '$ALGO'. Use ppo, grpo, or drgrpo." >&2
+    exit 1
+    ;;
+esac
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -40,6 +63,8 @@ COMMON_FLAGS=(
   trainer.nnodes=1
   micro_batch_size_per_gpu=4
   ppo_mini_batch_size=32
+  trainer.max_actor_ckpt_to_keep=5
+  trainer.max_critic_ckpt_to_keep=5
   algorithm.kl_ctrl.kl_coef=0.001
   actor_rollout_ref.actor.kl_loss_coef=0.001
   actor_rollout_ref.actor.use_kl_loss=True
@@ -48,7 +73,9 @@ COMMON_FLAGS=(
   es_manager.train.env_configs.n_groups=[8]
   trainer.default_local_dir="${OUTPUT_DIR}"
   model_path="${MODEL_PATH}"
-  algorithm.adv_estimator=gae
+  algorithm.adv_estimator="${ADV_ESTIMATOR}"
+  algorithm.norm_adv_by_std_in_grpo="${NORM_ADV_BY_STD_IN_GRPO}"
+  actor_rollout_ref.actor.loss_agg_mode="${LOSS_AGG_MODE}"
   system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\""
   trainer.val_before_train=False
 )

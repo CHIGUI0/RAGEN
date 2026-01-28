@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 
 # CONFIGURATION
-WANDB_PATH = "deimos-xing/AGEN_gradient_analysis/jkvkalpa"
+WANDB_PATH = "deimos-xing/AGEN_gradient_analysis/grfp9xqf"
 BUCKETS = [
     "bucket_1",
     "bucket_2",

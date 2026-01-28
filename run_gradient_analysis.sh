@@ -39,8 +39,9 @@ python3 train.py --config-name "_2_sokoban" \
     es_manager.train.group_size=32 \
     es_manager.train.env_configs.n_groups=[256] \
     trainer.default_local_dir="/mnt/permanent/xjin/20260126_filters_final/gradient_analysis_sokoban_3b" \
-    model_path=Qwen/Qwen2.5-3B-Instruct \
+    model_path=Qwen/Qwen2.5-3B \
     algorithm.adv_estimator=gae \
+    actor_rollout_ref.rollout.rollout_filter_value=1.0 \
     system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\"" \
     trainer.val_before_train=False \
     +trainer.gradient_analysis_mode=True \

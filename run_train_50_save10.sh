@@ -31,6 +31,8 @@ EXP_NAME="gradient_analysis_ckpt_sokoban_3b"
 OUTPUT_DIR="/mnt/permanent/xjin/20260126_filters_final/${EXP_NAME}"
 MODEL_PATH="Qwen/Qwen2.5-3B"
 
+mkdir -p "$OUTPUT_DIR"
+
 COMMON_FLAGS=(
   trainer.project_name=AGEN_gradient_analysis
   trainer.experiment_name="${EXP_NAME}"

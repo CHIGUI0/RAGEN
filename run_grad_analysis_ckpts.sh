@@ -48,6 +48,7 @@ COMMON_FLAGS=(
   trainer.default_local_dir="${OUTPUT_DIR}"
   model_path="${MODEL_PATH}"
   algorithm.adv_estimator=gae
+  actor_rollout_ref.rollout.rollout_filter_value=1.0
   system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\""
   trainer.val_before_train=False
 )

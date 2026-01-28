@@ -72,6 +72,7 @@ get_model_path() {
     case "$1" in
         Qwen2.5-3B-Instruct) echo "Qwen/Qwen2.5-3B-Instruct" ;;
         QwQ-32B) echo "Qwen/QwQ-32B" ;;
+        Llama-3.2-3B-Instruct) echo "meta-llama/Llama-3.2-3B-Instruct" ;;
         *) echo "Qwen/$1" ;;
     esac
 }

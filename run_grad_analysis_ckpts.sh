@@ -114,18 +114,19 @@ case "$ALGO" in
 esac
 
 IFS=',' read -r -a STEPS <<< "${STEPS_CSV}"
-for GPU_CSV in "${GPU_GROUPS[@]}"; do
-  for step in "${STEPS[@]}"; do
-    CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
-    if [ ! -d "$CKPT_DIR" ]; then
-      echo "WARN: missing checkpoint at $CKPT_DIR, skipping"
-      continue
-    fi
-
-    EXP_NAME="${EXP_NAME_BASE}_step${step}_bm${BUCKET_MODE}_nb${NUM_BUCKETS}"
+for step in "${STEPS[@]}"; do
+  CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
+  if [ ! -d "$CKPT_DIR" ]; then
+    echo "WARN: missing checkpoint at $CKPT_DIR, skipping"
+    continue
+  fi
+  EXP_NAME="${EXP_NAME_BASE}_step${step}_bm${BUCKET_MODE}_nb${NUM_BUCKETS}"
+  pids=()
+  for GPU_CSV in "${GPU_GROUPS[@]}"; do
+    EXP_NAME_RUN="${EXP_NAME}"
     if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
       GPU_TAG="${GPU_CSV//,/}"
-      EXP_NAME="${EXP_NAME}_g${GPU_TAG}"
+      EXP_NAME_RUN="${EXP_NAME_RUN}_g${GPU_TAG}"
     fi
 
     python3 train.py --config-name "${ENV}" \
@@ -137,9 +138,12 @@ for GPU_CSV in "${GPU_GROUPS[@]}"; do
       trainer.resume_from_path="${CKPT_DIR}" \
       +trainer.gradient_analysis_mode=True \
       +trainer.gradient_analysis_every=1 \
-      trainer.experiment_name="${EXP_NAME}" \
+      trainer.experiment_name="${EXP_NAME_RUN}" \
       system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\"" \
-      "${COMMON_FLAGS[@]}"
-
+      "${COMMON_FLAGS[@]}" &
+    pids+=($!)
   done
+  if [ "${#pids[@]}" -gt 0 ]; then
+    wait "${pids[@]}"
+  fi
 done

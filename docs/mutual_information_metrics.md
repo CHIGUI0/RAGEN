@@ -103,7 +103,7 @@ This allows distinguishing:
 
 | Symbol | Definition | Description |
 |--------|------------|-------------|
-| $p(r \mid x)$ | $\prod_{t=1}^{T} p_\theta(r_t \mid x, r_{<t})$ | Conditional probability of reasoning $r$ given prompt $x$ under policy $\pi_\theta$ |
+| $p(r \mid x)$ | $\prod_{t=1}^{T} p_\theta(r_t \mid x, r_{1:t-1})$ | Conditional probability of reasoning $r$ given prompt $x$ under policy $\pi_\theta$ |
 | $p_{\text{mix}}(r)$ | $\frac{1}{N} \sum_{j=1}^{N} p(r \mid x_j)$ | Marginal probability under uniform prompt mixture |
 | $\hat{p}(x)$ | $\frac{1}{N}$ | Empirical (uniform) distribution over batch prompts |
 
@@ -186,7 +186,7 @@ def _compute_mi_estimate(self, matched, marginal, N_prompts):
 
 For each reasoning $r_{i,k}$ and each prompt $x_j$, we compute the cross log-probability:
 
-$$\ell_j(r_{i,k}) = \log p(r_{i,k} \mid x_j) = \sum_{t=1}^{T} \log p_\theta(r_{i,k,t} \mid x_j, r_{i,k,<t})$$
+$$\ell_j(r_{i,k}) = \log p(r_{i,k} \mid x_j) = \sum_{t=1}^{T} \log p_\theta(r_{i,k,t} \mid x_j, r_{i,k,1:t-1})$$
 
 This forms a matrix $\mathbf{L} \in \mathbb{R}^{NK \times N}$ where:
 - Rows index (trajectory, sample) pairs
@@ -238,13 +238,13 @@ We compute two variants of each metric:
 
 ### 6.1 Per-Token (Length-Normalized)
 
-$$\bar{\ell}_j(r) = \frac{1}{T} \sum_{t=1}^{T} \log p(r_t \mid x_j, r_{<t})$$
+$$\bar{\ell}_j(r) = \frac{1}{T} \sum_{t=1}^{T} \log p(r_t \mid x_j, r_{1:t-1})$$
 
 This reduces length bias when comparing reasoning of different lengths.
 
 ### 6.2 Per-Sequence (Sum)
 
-$$\ell_j(r) = \sum_{t=1}^{T} \log p(r_t \mid x_j, r_{<t})$$
+$$\ell_j(r) = \sum_{t=1}^{T} \log p(r_t \mid x_j, r_{1:t-1})$$
 
 This captures total log-probability without normalization.
 
@@ -263,6 +263,7 @@ This captures total log-probability without normalization.
 ### 7.1 Retrieval Accuracy
 
 **Definition**: Fraction of samples where the highest cross-log-probability matches the true prompt.
+If multiple prompts are identical (same tokenized prompt text), they are treated as equivalent columns, and any of those columns counts as correct for retrieval accuracy and chance.
 
 $$\text{Acc} = \frac{1}{NK} \sum_{i,k} \mathbf{1}\left[ \arg\max_j \ell_j(r_{i,k}) = i \right]$$
 
@@ -284,6 +285,8 @@ def _compute_retrieval_accuracy(self, cross_log_probs, col_ids, N_prompts):
 - `collapse/retrieval_accuracy@k` — Top-k accuracy (k ∈ {2, 4, 8})
 - `collapse/retrieval_chance_level` — Expected accuracy under random guessing
 - `collapse/retrieval_above_chance` — Accuracy improvement over chance
+ - `collapse/retrieval_chance_level@k` — Expected top-k accuracy under random guessing
+ - `collapse/retrieval_above_chance@k` — Top-k accuracy improvement over chance
 
 ### 7.2 MI Z-Score
 
@@ -311,8 +314,12 @@ where $\alpha = 0.9$ (default decay rate).
 
 **Metrics Output**:
 - `collapse/marginal_std` — Current batch marginal std
+- `collapse/marginal_std_seq` — Current batch marginal std (per-sequence)
 - `collapse/marginal_std_ema` — EMA of marginal std
 - `collapse/mi_zscore_ema` — MI Z-score normalized by EMA std
+- `collapse/marginal_std_ema_seq` — EMA of marginal std (per-sequence)
+- `collapse/mi_zscore_seq` — MI Z-score (per-sequence)
+- `collapse/mi_zscore_ema_seq` — MI Z-score normalized by EMA std (per-sequence)
 
 ---
 
@@ -413,5 +420,3 @@ This means:
 - If $H(R|X)$ drops but $H(R)$ stays constant → MI increases (good)
 - If both $H(R)$ and $H(R|X)$ drop equally → MI stays constant (entropy collapse)
 - If $H(R) \to H(R|X)$ → MI → 0 (template collapse)
-
----

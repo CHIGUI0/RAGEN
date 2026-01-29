@@ -110,10 +110,10 @@ case "$ALGO" in
     COMMON_FLAGS+=(algorithm.adv_estimator=gae actor_rollout_ref.actor.loss_agg_mode=token-mean)
     ;;
   grpo)
-    COMMON_FLAGS+=(algorithm.adv_estimator=grpo algorithm.norm_adv_by_std_in_grpo=true actor_rollout_ref.actor.loss_agg_mode=seq-mean-token-mean)
+    COMMON_FLAGS+=(micro_batch_size_per_gpu=2 algorithm.adv_estimator=grpo algorithm.norm_adv_by_std_in_grpo=true actor_rollout_ref.actor.loss_agg_mode=seq-mean-token-mean)
     ;;
   drgrpo)
-    COMMON_FLAGS+=(algorithm.adv_estimator=grpo algorithm.norm_adv_by_std_in_grpo=false actor_rollout_ref.actor.loss_agg_mode=seq-mean-token-sum)
+    COMMON_FLAGS+=(micro_batch_size_per_gpu=2 algorithm.adv_estimator=grpo algorithm.norm_adv_by_std_in_grpo=false actor_rollout_ref.actor.loss_agg_mode=seq-mean-token-sum)
     ;;
   *)
     echo "ERROR: Unknown algo '$ALGO'. Use ppo, grpo, or drgrpo." >&2

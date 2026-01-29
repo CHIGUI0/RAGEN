@@ -35,7 +35,7 @@ ENV_GROUPS=128
 GROUP_SIZE=16
 
 EXP_NAME="gradient_analysis_ckpt_sokoban_3b_grpo_${ENV_GROUPS}x${GROUP_SIZE}_step0"
-OUTPUT_DIR="${BASE_OUTPUT_DIR}/gradient_analysis_ckpt_sokoban_3b_grpo"
+OUTPUT_DIR="${BASE_OUTPUT_DIR}/gradient_analysis_ckpt_sokoban_3b_grpo_step0"
 
 echo "INFO: Launching GRPO step 0 on GPUs [${GPU_CSV}] with exp_name=${EXP_NAME}"
 
@@ -66,7 +66,7 @@ CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
   trainer.total_training_steps=1 \
   trainer.save_freq=-1 \
   trainer.test_freq=-1 \
-  trainer.resume_mode=none \
+  trainer.resume_mode=disable \
   trainer.resume_from_path=null \
   +trainer.gradient_analysis_mode=True \
   +trainer.gradient_analysis_every=1 \

@@ -26,19 +26,27 @@ echo "INFO: Detected $TOTAL_GPUS GPUs."
 # Inputs
 # -----------------------
 DEFAULT_BASE="/mnt/permanent/xjin/20260126_filters_final"
-if [ "${1:-}" = "grpo" ] || [ "${1:-}" = "drgrpo" ]; then
+if [ "${1:-}" = "ppo" ] || [ "${1:-}" = "grpo" ] || [ "${1:-}" = "drgrpo" ]; then
   ALGO="$1"
-  OUTPUT_DIR="${DEFAULT_BASE}/gradient_analysis_ckpt_sokoban_3b_${ALGO}"
+  if [ "$ALGO" = "ppo" ]; then
+    OUTPUT_DIR="${DEFAULT_BASE}/gradient_analysis_ckpt_sokoban_3b_instruct_ppo"
+  else
+    OUTPUT_DIR="${DEFAULT_BASE}/gradient_analysis_ckpt_sokoban_3b_${ALGO}"
+  fi
   GPU_CSV="${2:-0,1,2,3}"
   GPUS_PER_EXP="${3:-4}"
 else
-  OUTPUT_DIR="${1:-${DEFAULT_BASE}/gradient_analysis_ckpt_sokoban_3b_grpo}"
-  ALGO="${2:-grpo}"
+  OUTPUT_DIR="${1:-${DEFAULT_BASE}/gradient_analysis_ckpt_sokoban_3b_instruct_ppo}"
+  ALGO="${2:-ppo}"
   GPU_CSV="${3:-0,1,2,3}"
   GPUS_PER_EXP="${4:-4}"
 fi
 ENV="_2_sokoban"
-EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_${ALGO}"
+if [ "$ALGO" = "ppo" ]; then
+  EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_instruct_ppo_exploratory_32x8"
+else
+  EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_${ALGO}"
+fi
 MODEL_PATH="Qwen/Qwen2.5-3B"
 
 COMMON_FLAGS=(
@@ -50,9 +58,9 @@ COMMON_FLAGS=(
   algorithm.kl_ctrl.kl_coef=0.001
   actor_rollout_ref.actor.kl_loss_coef=0.001
   actor_rollout_ref.actor.use_kl_loss=True
-  es_manager.train.env_groups=256
-  es_manager.train.group_size=32
-  es_manager.train.env_configs.n_groups=[256]
+  es_manager.train.env_groups=32
+  es_manager.train.group_size=8
+  es_manager.train.env_configs.n_groups=[32]
   trainer.default_local_dir="${OUTPUT_DIR}"
   model_path="${MODEL_PATH}"
   algorithm.adv_estimator=grpo
@@ -63,6 +71,9 @@ COMMON_FLAGS=(
 )
 
 case "$ALGO" in
+  ppo)
+    COMMON_FLAGS+=(algorithm.adv_estimator=gae actor_rollout_ref.actor.loss_agg_mode=token-mean)
+    ;;
   grpo)
     COMMON_FLAGS+=(algorithm.norm_adv_by_std_in_grpo=true actor_rollout_ref.actor.loss_agg_mode=seq-mean-token-mean)
     ;;
@@ -70,12 +81,12 @@ case "$ALGO" in
     COMMON_FLAGS+=(algorithm.norm_adv_by_std_in_grpo=false actor_rollout_ref.actor.loss_agg_mode=seq-mean-token-sum)
     ;;
   *)
-    echo "ERROR: Unknown algo '$ALGO'. Use grpo or drgrpo." >&2
+    echo "ERROR: Unknown algo '$ALGO'. Use ppo, grpo, or drgrpo." >&2
     exit 1
     ;;
 esac
 
-for step in 10 50; do
+for step in 25 50 75 100; do
   CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
   if [ ! -d "$CKPT_DIR" ]; then
     echo "WARN: missing checkpoint at $CKPT_DIR, skipping"

@@ -124,7 +124,8 @@ for GPU_CSV in "${GPU_GROUPS[@]}"; do
 
     EXP_NAME="${EXP_NAME_BASE}_step${step}_bm${BUCKET_MODE}_nb${NUM_BUCKETS}"
     if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
-      EXP_NAME="${EXP_NAME}_g${GPU_CSV}"
+      GPU_TAG="${GPU_CSV//,/}"
+      EXP_NAME="${EXP_NAME}_g${GPU_TAG}"
     fi
 
     python3 train.py --config-name "${ENV}" \

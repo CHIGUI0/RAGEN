@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 
 # CONFIGURATION
-WANDB_PATH = "deimos-xing/AGEN_gradient_analysis/grfp9xqf"
+WANDB_PATH = "deimos-xing/AGEN_gradient_analysis/mfcmeyxt"
 BUCKETS = [
     "bucket_1",
     "bucket_2",
@@ -16,7 +16,8 @@ BUCKETS = [
 ]
 COMPONENTS = ["kl", "entropy", "task"]
 LOSS_COMPONENTS = ["policy", "entropy", "kl", "total"]
-OUTPUT_DIR = "gradient_plots"
+DEFAULT_OUTPUT_DIR = "gradient_plots"
+OUTPUT_DIR = os.environ.get("PLOT_OUTPUT_DIR", DEFAULT_OUTPUT_DIR)
 TARGET_STEPS = "all"  # "all", list like [1, 11], or None to auto-pick lowest step with bucket data
 
 def get_bucket_label(bucket_name):
@@ -98,6 +99,7 @@ def main():
         output_file_loss = os.path.join(OUTPUT_DIR, f"gradient_analysis_loss_plots_{step_tag}.png")
         output_file_rv = os.path.join(OUTPUT_DIR, f"gradient_analysis_reward_std_{step_tag}.png")
         output_file_normed = os.path.join(OUTPUT_DIR, f"gradient_analysis_normed_grads_{step_tag}.png")
+        output_file_summary = os.path.join(OUTPUT_DIR, f"gradient_analysis_summary_{step_tag}.png")
 
         # Create subplots for gradient norms
         fig, axes = plt.subplots(1, 3, figsize=(20, 6))
@@ -243,6 +245,59 @@ def main():
         plt.savefig(output_file_normed, bbox_inches="tight", dpi=300)
         print(f"Success! Normalized grad visualization saved to: {os.path.abspath(output_file_normed)}")
         plt.close(fig4)
+
+        # Summary 3-panel plot with available aggregates
+        rv_means = [bucket_rv[b]["mean"] for b in BUCKETS]
+        rv_mins = [bucket_rv[b]["min"] for b in BUCKETS]
+        rv_maxs = [bucket_rv[b]["max"] for b in BUCKETS]
+        task_grads = [metric_source.get(f"grad_norm/{b}/task", 0) for b in BUCKETS]
+        kl_grads = [metric_source.get(f"grad_norm/{b}/kl", 0) for b in BUCKETS]
+        ent_grads = [metric_source.get(f"grad_norm/{b}/entropy", 0) for b in BUCKETS]
+        reg_grads = [k + e for k, e in zip(kl_grads, ent_grads)]
+
+        fig5, axes5 = plt.subplots(1, 3, figsize=(20, 6))
+        plt.subplots_adjust(wspace=0.35, top=0.80, bottom=0.15)
+
+        # Left: RV mean with min/max error bars per bucket
+        ax = axes5[0]
+        yerr = [
+            [m - lo for m, lo in zip(rv_means, rv_mins)],
+            [hi - m for m, hi in zip(rv_means, rv_maxs)],
+        ]
+        ax.errorbar(x_labels, rv_means, yerr=yerr, fmt="o-", color="#6c5ce7", ecolor="#2d3436", capsize=4)
+        ax.set_title("RV by Bucket (Mean ± Min/Max)", fontsize=13, fontweight="bold")
+        ax.set_xlabel("Bucket")
+        ax.set_ylabel("Reward Variance (Std)")
+        ax.grid(axis="y", linestyle="--", alpha=0.5)
+
+        # Middle: task grad norm vs mean RV
+        ax = axes5[1]
+        ax.plot(rv_means, task_grads, "o-", color="#e67e22")
+        for i, (xv, yv) in enumerate(zip(rv_means, task_grads), start=1):
+            ax.text(xv, yv, f"Q{i}", fontsize=8, ha="left", va="bottom")
+        ax.set_title("Task Grad Norm vs RV Mean", fontsize=13, fontweight="bold")
+        ax.set_xlabel("RV Mean")
+        ax.set_ylabel("Task Grad Norm")
+        ax.grid(axis="y", linestyle="--", alpha=0.5)
+        mid_ylim = ax.get_ylim()
+
+        # Right: regularizer grad norm (KL+Entropy) vs mean RV
+        ax = axes5[2]
+        ax.plot(rv_means, reg_grads, "o-", color="#16a085")
+        for i, (xv, yv) in enumerate(zip(rv_means, reg_grads), start=1):
+            ax.text(xv, yv, f"Q{i}", fontsize=8, ha="left", va="bottom")
+        ax.set_title("Reg Grad Norm vs RV Mean (KL+Ent)", fontsize=13, fontweight="bold")
+        ax.set_xlabel("RV Mean")
+        ax.set_ylabel("KL+Entropy Grad Norm")
+        ax.set_ylim(0, 1)
+        ax.grid(axis="y", linestyle="--", alpha=0.5)
+
+        fig5.suptitle(f"Gradient Summary - Run: {run.name} (Step {step_key})", fontsize=16, y=0.98)
+        plt.tight_layout()
+        plt.savefig(output_file_summary, bbox_inches="tight", dpi=300)
+        print(f"Success! Summary visualization saved to: {os.path.abspath(output_file_summary)}")
+        plt.close(fig5)
+
 
 if __name__ == "__main__":
     main()

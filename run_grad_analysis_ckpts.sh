@@ -158,8 +158,8 @@ if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
           +trainer.gradient_analysis_every=1 \
           trainer.experiment_name="${EXP_NAME_RUN}" \
           system.CUDA_VISIBLE_DEVICES="\"0,1,2,3,4,5,6,7\"" \
-          trainer.n_gpus_per_node=8 \
-          "${COMMON_FLAGS[@]}" &
+          "${COMMON_FLAGS[@]}" \
+          trainer.n_gpus_per_node=8 &
       else
         CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
           trainer.total_epochs=1 \
@@ -203,8 +203,8 @@ else
         +trainer.gradient_analysis_every=1 \
         trainer.experiment_name="${EXP_NAME_RUN}" \
         system.CUDA_VISIBLE_DEVICES="\"0,1,2,3,4,5,6,7\"" \
-        trainer.n_gpus_per_node=8 \
-        "${COMMON_FLAGS[@]}"
+        "${COMMON_FLAGS[@]}" \
+        trainer.n_gpus_per_node=8
     else
       CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
         trainer.total_epochs=1 \

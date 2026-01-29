@@ -66,7 +66,15 @@ if [ "$GPUS_PER_EXP" -eq 8 ] && { [ "$ALGO" = "grpo" ] || [ "$ALGO" = "drgrpo" ]
   RUN_GPUS_PER_EXP=4
   GPU_GROUPS=("0,1,2,3" "4,5,6,7")
 else
-  GPU_GROUPS=($(seq -s, 0 $((GPUS_PER_EXP - 1))))
+  GPU_CSV=""
+  for i in $(seq 0 $((GPUS_PER_EXP - 1))); do
+    if [ -z "$GPU_CSV" ]; then
+      GPU_CSV="${i}"
+    else
+      GPU_CSV="${GPU_CSV},${i}"
+    fi
+  done
+  GPU_GROUPS=("${GPU_CSV}")
 fi
 ENV="_2_sokoban"
 if [ "$ALGO" = "ppo" ]; then
@@ -114,6 +122,7 @@ case "$ALGO" in
 esac
 
 IFS=',' read -r -a STEPS <<< "${STEPS_CSV}"
+step_index=0
 for step in "${STEPS[@]}"; do
   CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
   if [ ! -d "$CKPT_DIR" ]; then
@@ -121,29 +130,29 @@ for step in "${STEPS[@]}"; do
     continue
   fi
   EXP_NAME="${EXP_NAME_BASE}_step${step}_bm${BUCKET_MODE}_nb${NUM_BUCKETS}"
-  pids=()
-  for GPU_CSV in "${GPU_GROUPS[@]}"; do
-    EXP_NAME_RUN="${EXP_NAME}"
-    if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
-      GPU_TAG="${GPU_CSV//,/}"
-      EXP_NAME_RUN="${EXP_NAME_RUN}_g${GPU_TAG}"
-    fi
-
-    python3 train.py --config-name "${ENV}" \
-      trainer.total_epochs=1 \
-      trainer.total_training_steps=1 \
-      trainer.save_freq=-1 \
-      trainer.test_freq=-1 \
-      trainer.resume_mode=resume_path \
-      trainer.resume_from_path="${CKPT_DIR}" \
-      +trainer.gradient_analysis_mode=True \
-      +trainer.gradient_analysis_every=1 \
-      trainer.experiment_name="${EXP_NAME_RUN}" \
-      system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\"" \
-      "${COMMON_FLAGS[@]}" &
-    pids+=($!)
-  done
-  if [ "${#pids[@]}" -gt 0 ]; then
-    wait "${pids[@]}"
+  GPU_CSV="${GPU_GROUPS[0]}"
+  if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
+    idx=$((step_index % ${#GPU_GROUPS[@]}))
+    GPU_CSV="${GPU_GROUPS[$idx]}"
   fi
+
+  EXP_NAME_RUN="${EXP_NAME}"
+  if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
+    GPU_TAG="${GPU_CSV//,/}"
+    EXP_NAME_RUN="${EXP_NAME_RUN}_g${GPU_TAG}"
+  fi
+
+  echo "INFO: Launching step ${step} on GPUs [${GPU_CSV}] with exp_name=${EXP_NAME_RUN}"
+  CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
+    trainer.total_epochs=1 \
+    trainer.total_training_steps=1 \
+    trainer.save_freq=-1 \
+    trainer.test_freq=-1 \
+    trainer.resume_mode=resume_path \
+    trainer.resume_from_path="${CKPT_DIR}" \
+    +trainer.gradient_analysis_mode=True \
+    +trainer.gradient_analysis_every=1 \
+    trainer.experiment_name="${EXP_NAME_RUN}" \
+    "${COMMON_FLAGS[@]}"
+  step_index=$((step_index + 1))
 done

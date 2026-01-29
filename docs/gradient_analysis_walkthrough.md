@@ -9,8 +9,10 @@ The feature allows for disaggregated gradient analysis across reward-variance **
 
 ### 1. Bucket Selection
 In `RewardRolloutFilter.split_into_buckets`:
-- **Buckets**: configurable via `gradient_analysis_num_buckets` (default: 8) over **groups**, sorted by group-level `reward_std`.
-- **Bucket names**: `bucket_1` ... `bucket_8` (when using 8 buckets), ordered low → high reward variance.
+- **Buckets**:
+  - **Quantile mode (default)**: `gradient_analysis_num_buckets` (default: 8) over **groups**, sorted by group-level `reward_std`.
+  - **Fixed-RV mode**: `gradient_analysis_bucket_mode=fixed_rv` with fixed gaps `[0,1), [1,2), [2,3), [3,4), [4,5), [5,+inf)`, yielding 6 buckets.
+- **Bucket names**: `bucket_1` ... `bucket_N`, ordered low → high reward variance.
 - Uses the `reward_std` computed during rollout filtering.
 - **Remainder Handling**: if groups don't divide evenly, the remainder is assigned to the **last (highest RV)** bucket so early buckets have equal group counts.
 
@@ -58,6 +60,7 @@ python3 train.py ... +trainer.gradient_analysis_mode=True +trainer.gradient_anal
 ```
 Optional flags:
 - `+actor_rollout_ref.rollout.gradient_analysis_num_buckets=8`
+- `+actor_rollout_ref.rollout.gradient_analysis_bucket_mode=quantile|fixed_rv`
 
 `gradient_analysis_every` controls the reporting cadence (default: off). Reporting runs on steps where `(global_steps - 1) % gradient_analysis_every == 0` (i.e., it triggers at step 1).
 Metrics will be logged to WandB and the console under `grad_norm/<bucket>/`.

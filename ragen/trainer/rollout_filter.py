@@ -23,6 +23,7 @@ class RolloutFilterConfig:
     include_zero: bool = True
     strategy: str = "top_p"
     bucket_count: int = 4
+    bucket_mode: str = "quantile"
 
 
 class RolloutFilter:
@@ -57,6 +58,10 @@ class RolloutFilter:
     @property
     def bucket_count(self) -> int:
         return self.config.bucket_count
+
+    @property
+    def bucket_mode(self) -> str:
+        return self.config.bucket_mode
 
     def _select_top_groups(self, scores: torch.Tensor) -> torch.Tensor:
         # Convert to float for safety with epsilon
@@ -476,35 +481,53 @@ class RewardRolloutFilter(RolloutFilter):
             num_groups = total_samples // group_size
             reward_std_per_group = reward_std.view(num_groups, group_size).mean(dim=1)
 
-        # Equal-percentage buckets (by groups). Remainder is assigned to the last bucket.
-        num_buckets = self.bucket_count
-        groups_per_bucket = num_groups // num_buckets
-        remainder = num_groups % num_buckets
-        sorted_group_ids = torch.argsort(reward_std_per_group)
-
         buckets_masks = {"all": torch.ones_like(reward_std, dtype=torch.bool)}
         bucket_group_masks = {"all": torch.ones(num_groups, dtype=torch.bool, device=reward_std.device)}
-        start = 0
-        for i in range(num_buckets):
-            size = groups_per_bucket + (remainder if i == num_buckets - 1 else 0)
-            end = start + size
-            name = f"bucket_{i + 1}"
 
-            if size == 0:
-                buckets_masks[name] = torch.zeros_like(reward_std, dtype=torch.bool)
-                bucket_group_masks[name] = torch.zeros(num_groups, dtype=torch.bool, device=reward_std.device)
-                continue
+        if self.bucket_mode == "fixed_rv":
+            # Fixed RV gaps: [0,1), [1,2), [2,3), [3,4), [4,5), [5, +inf)
+            rv_edges = [0, 1, 2, 3, 4, 5]
+            for i, low in enumerate(rv_edges):
+                high = rv_edges[i + 1] if i + 1 < len(rv_edges) else None
+                name = f"bucket_{i + 1}"
+                if high is None:
+                    group_mask = reward_std_per_group >= low
+                else:
+                    group_mask = (reward_std_per_group >= low) & (reward_std_per_group < high)
+                if batch.non_tensor_batch is not None and "group_ids" in batch.non_tensor_batch:
+                    sample_mask = group_mask[inverse]
+                else:
+                    sample_mask = group_mask.unsqueeze(1).expand(-1, group_size).reshape(-1)
+                buckets_masks[name] = sample_mask
+                bucket_group_masks[name] = group_mask
+        else:
+            # Equal-percentage buckets (by groups). Remainder is assigned to the last bucket.
+            num_buckets = self.bucket_count
+            groups_per_bucket = num_groups // num_buckets
+            remainder = num_groups % num_buckets
+            sorted_group_ids = torch.argsort(reward_std_per_group)
 
-            group_ids = sorted_group_ids[start:end]
-            group_mask = torch.zeros(num_groups, dtype=torch.bool, device=reward_std.device)
-            group_mask[group_ids] = True
-            if batch.non_tensor_batch is not None and "group_ids" in batch.non_tensor_batch:
-                sample_mask = group_mask[inverse]
-            else:
-                sample_mask = group_mask.unsqueeze(1).expand(-1, group_size).reshape(-1)
-            buckets_masks[name] = sample_mask
-            bucket_group_masks[name] = group_mask
-            start = end
+            start = 0
+            for i in range(num_buckets):
+                size = groups_per_bucket + (remainder if i == num_buckets - 1 else 0)
+                end = start + size
+                name = f"bucket_{i + 1}"
+
+                if size == 0:
+                    buckets_masks[name] = torch.zeros_like(reward_std, dtype=torch.bool)
+                    bucket_group_masks[name] = torch.zeros(num_groups, dtype=torch.bool, device=reward_std.device)
+                    continue
+
+                group_ids = sorted_group_ids[start:end]
+                group_mask = torch.zeros(num_groups, dtype=torch.bool, device=reward_std.device)
+                group_mask[group_ids] = True
+                if batch.non_tensor_batch is not None and "group_ids" in batch.non_tensor_batch:
+                    sample_mask = group_mask[inverse]
+                else:
+                    sample_mask = group_mask.unsqueeze(1).expand(-1, group_size).reshape(-1)
+                buckets_masks[name] = sample_mask
+                bucket_group_masks[name] = group_mask
+                start = end
 
         result = {}
         
@@ -519,11 +542,15 @@ class RewardRolloutFilter(RolloutFilter):
                 percentage = (count / total_samples) * 100
                 group_mask = bucket_group_masks[name]
                 avg_std = reward_std_per_group[group_mask].mean().item()
-                bucket_rv_values = reward_std_per_group[group_ids].detach().cpu().tolist()
-                if batch.non_tensor_batch is not None and "group_ids" in batch.non_tensor_batch:
-                    bucket_group_ids = unique_group_ids[group_ids].detach().cpu().tolist()
+                if self.bucket_mode == "fixed_rv":
+                    group_ids_for_bucket = torch.where(group_mask)[0]
                 else:
-                    bucket_group_ids = group_ids.detach().cpu().tolist()
+                    group_ids_for_bucket = group_ids
+                bucket_rv_values = reward_std_per_group[group_ids_for_bucket].detach().cpu().tolist()
+                if batch.non_tensor_batch is not None and "group_ids" in batch.non_tensor_batch:
+                    bucket_group_ids = unique_group_ids[group_ids_for_bucket].detach().cpu().tolist()
+                else:
+                    bucket_group_ids = group_ids_for_bucket.detach().cpu().tolist()
                 print(f"{name:<20} | {count:<10} | {percentage:>10.2f}% | {avg_std:>12.4f}")
                 
                 try:
@@ -691,6 +718,7 @@ def build_rollout_filter(
     include_zero: bool = True,
     strategy: str = "top_p",
     bucket_count: int = 4,
+    bucket_mode: str = "quantile",
 ) -> RolloutFilter:
     metric = (metric or "reward_variance").lower()
     metric = {
@@ -707,6 +735,7 @@ def build_rollout_filter(
         include_zero=include_zero,
         strategy=strategy,
         bucket_count=bucket_count,
+        bucket_mode=bucket_mode,
     )
 
     if metric == "length":

@@ -1,6 +1,7 @@
 import wandb
 import matplotlib.pyplot as plt
 import os
+import json
 
 # CONFIGURATION
 WANDB_PATH = "deimos-xing/AGEN_gradient_analysis/mfcmeyxt"
@@ -113,6 +114,30 @@ def main():
             }
             for b in BUCKETS
         }
+        bucket_rv_values = {b: [] for b in BUCKETS}
+        table_keys = [f"grad_norm/{b}/group_rv_table" for b in BUCKETS]
+        for row in run.scan_history(keys=["_step", *table_keys]):
+            if row.get("_step") != step_key:
+                continue
+            for b in BUCKETS:
+                key = f"grad_norm/{b}/group_rv_table"
+                table_meta = row.get(key)
+                if not isinstance(table_meta, dict) or "path" not in table_meta:
+                    continue
+                table_path = table_meta["path"]
+                try:
+                    file_ref = run.file(table_path)
+                    local_path = file_ref.download(replace=True).name
+                    with open(local_path, "r") as f:
+                        table_json = json.load(f)
+                    # table_json has keys: columns, data
+                    data_rows = table_json.get("data", [])
+                    # columns: bucket, group_id, reward_std
+                    for row_vals in data_rows:
+                        if len(row_vals) >= 3:
+                            bucket_rv_values[b].append(float(row_vals[2]))
+                except Exception:
+                    continue
         legend_lines = []
         for label, bucket in zip(x_labels, BUCKETS):
             rv = bucket_rv.get(bucket, {})
@@ -260,12 +285,29 @@ def main():
 
         # Left: RV mean with min/max error bars per bucket
         ax = axes5[0]
-        yerr = [
-            [m - lo for m, lo in zip(rv_means, rv_mins)],
-            [hi - m for m, hi in zip(rv_means, rv_maxs)],
-        ]
-        ax.errorbar(x_labels, rv_means, yerr=yerr, fmt="o-", color="#6c5ce7", ecolor="#2d3436", capsize=4)
-        ax.set_title("RV by Bucket (Mean ± Min/Max)", fontsize=13, fontweight="bold")
+        use_boxplot = any(bucket_rv_values[b] for b in BUCKETS)
+        if use_boxplot:
+            data = [bucket_rv_values[b] for b in BUCKETS]
+            data_mins = [min(v) if v else 0 for v in data]
+            data_maxs = [max(v) if v else 0 for v in data]
+            # sanity check: compare against logged min/max (per-sample)
+            mismatch = any(
+                abs(dm - rm) > 1e-3 or abs(dx - rx) > 1e-3
+                for dm, rm, dx, rx in zip(data_mins, rv_mins, data_maxs, rv_maxs)
+            )
+            if mismatch:
+                print(f"Warning: bucket RV table min/max mismatch at step {step_key}; falling back to error bars.")
+                use_boxplot = False
+        if use_boxplot:
+            ax.boxplot(data, tick_labels=x_labels, showfliers=False)
+            ax.set_title("RV by Bucket (Boxplot)", fontsize=13, fontweight="bold")
+        else:
+            yerr = [
+                [m - lo for m, lo in zip(rv_means, rv_mins)],
+                [hi - m for m, hi in zip(rv_means, rv_maxs)],
+            ]
+            ax.errorbar(x_labels, rv_means, yerr=yerr, fmt="o-", color="#6c5ce7", ecolor="#2d3436", capsize=4)
+            ax.set_title("RV by Bucket (Mean ± Min/Max)", fontsize=13, fontweight="bold")
         ax.set_xlabel("Bucket")
         ax.set_ylabel("Reward Variance (Std)")
         ax.grid(axis="y", linestyle="--", alpha=0.5)

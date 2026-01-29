@@ -77,7 +77,7 @@ else
   GPU_GROUPS=("${GPU_CSV}")
 fi
 ENV="_2_sokoban"
-ENV_GROUPS=64
+ENV_GROUPS=128
 GROUP_SIZE=16
 if [ "$ALGO" = "ppo" ]; then
   EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_instruct_ppo_exploratory_${ENV_GROUPS}x${GROUP_SIZE}"

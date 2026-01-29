@@ -134,6 +134,7 @@ if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
     pids=()
     for ((g=0; g<${#GPU_GROUPS[@]}; g++)); do
       step="${STEPS[$((i + g))]:-}"
+      step="${step//[[:space:]]/}"
       if [ -z "${step}" ]; then
         continue
       fi
@@ -154,6 +155,8 @@ if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
           trainer.total_training_steps=1 \
           trainer.save_freq=-1 \
           trainer.test_freq=-1 \
+          trainer.resume_mode=none \
+          trainer.resume_from_path=null \
           +trainer.gradient_analysis_mode=True \
           +trainer.gradient_analysis_every=1 \
           trainer.experiment_name="${EXP_NAME_RUN}" \
@@ -182,6 +185,7 @@ if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
   done
 else
   for step in "${STEPS[@]}"; do
+    step="${step//[[:space:]]/}"
     CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
     if [ "$step" != "0" ] && [ ! -d "$CKPT_DIR" ]; then
       echo "WARN: missing checkpoint at $CKPT_DIR, skipping"
@@ -199,6 +203,8 @@ else
         trainer.total_training_steps=1 \
         trainer.save_freq=-1 \
         trainer.test_freq=-1 \
+        trainer.resume_mode=none \
+        trainer.resume_from_path=null \
         +trainer.gradient_analysis_mode=True \
         +trainer.gradient_analysis_every=1 \
         trainer.experiment_name="${EXP_NAME_RUN}" \

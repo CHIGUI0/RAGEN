@@ -149,7 +149,7 @@ if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
       echo "INFO: Launching step ${step} on GPUs [${GPU_CSV}] with exp_name=${EXP_NAME_RUN}"
       if [ "$step" = "0" ]; then
         echo "INFO: step 0 selected; running from init without resume_from_path"
-        CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
+        CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7" python3 train.py --config-name "${ENV}" \
           trainer.total_epochs=1 \
           trainer.total_training_steps=1 \
           trainer.save_freq=-1 \
@@ -157,7 +157,8 @@ if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
           +trainer.gradient_analysis_mode=True \
           +trainer.gradient_analysis_every=1 \
           trainer.experiment_name="${EXP_NAME_RUN}" \
-          system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\"" \
+          system.CUDA_VISIBLE_DEVICES="\"0,1,2,3,4,5,6,7\"" \
+          trainer.n_gpus_per_node=8 \
           "${COMMON_FLAGS[@]}" &
       else
         CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
@@ -193,7 +194,7 @@ else
     echo "INFO: Launching step ${step} on GPUs [${GPU_CSV}] with exp_name=${EXP_NAME_RUN}"
     if [ "$step" = "0" ]; then
       echo "INFO: step 0 selected; running from init without resume_from_path"
-      CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
+      CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7" python3 train.py --config-name "${ENV}" \
         trainer.total_epochs=1 \
         trainer.total_training_steps=1 \
         trainer.save_freq=-1 \
@@ -201,7 +202,8 @@ else
         +trainer.gradient_analysis_mode=True \
         +trainer.gradient_analysis_every=1 \
         trainer.experiment_name="${EXP_NAME_RUN}" \
-        system.CUDA_VISIBLE_DEVICES="\"${GPU_CSV}\"" \
+        system.CUDA_VISIBLE_DEVICES="\"0,1,2,3,4,5,6,7\"" \
+        trainer.n_gpus_per_node=8 \
         "${COMMON_FLAGS[@]}"
     else
       CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \

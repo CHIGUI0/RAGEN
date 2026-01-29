@@ -77,10 +77,12 @@ else
   GPU_GROUPS=("${GPU_CSV}")
 fi
 ENV="_2_sokoban"
+ENV_GROUPS=64
+GROUP_SIZE=16
 if [ "$ALGO" = "ppo" ]; then
-  EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_instruct_ppo_exploratory_32x8"
+  EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_instruct_ppo_exploratory_${ENV_GROUPS}x${GROUP_SIZE}"
 else
-  EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_${ALGO}"
+  EXP_NAME_BASE="gradient_analysis_ckpt_sokoban_3b_${ALGO}_${ENV_GROUPS}x${GROUP_SIZE}"
 fi
 MODEL_PATH="Qwen/Qwen2.5-3B"
 
@@ -93,9 +95,9 @@ COMMON_FLAGS=(
   algorithm.kl_ctrl.kl_coef=0.001
   actor_rollout_ref.actor.kl_loss_coef=0.001
   actor_rollout_ref.actor.use_kl_loss=True
-  es_manager.train.env_groups=64
-  es_manager.train.group_size=16
-  es_manager.train.env_configs.n_groups=[64]
+  es_manager.train.env_groups="${ENV_GROUPS}"
+  es_manager.train.group_size="${GROUP_SIZE}"
+  es_manager.train.env_configs.n_groups=["${ENV_GROUPS}"]
   trainer.default_local_dir="${OUTPUT_DIR}"
   model_path="${MODEL_PATH}"
   actor_rollout_ref.rollout.rollout_filter_value=1.0

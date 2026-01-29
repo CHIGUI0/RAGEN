@@ -124,37 +124,94 @@ case "$ALGO" in
 esac
 
 IFS=',' read -r -a STEPS <<< "${STEPS_CSV}"
-step_index=0
-for step in "${STEPS[@]}"; do
-  CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
-  if [ ! -d "$CKPT_DIR" ]; then
-    echo "WARN: missing checkpoint at $CKPT_DIR, skipping"
-    continue
-  fi
-  EXP_NAME="${EXP_NAME_BASE}_step${step}_bm${BUCKET_MODE}_nb${NUM_BUCKETS}"
-  GPU_CSV="${GPU_GROUPS[0]}"
-  if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
-    idx=$((step_index % ${#GPU_GROUPS[@]}))
-    GPU_CSV="${GPU_GROUPS[$idx]}"
-  fi
+if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
+  for ((i=0; i<${#STEPS[@]}; i+=${#GPU_GROUPS[@]})); do
+    step_a="${STEPS[$i]:-}"
+    step_b="${STEPS[$((i + 1))]:-}"
+    if [ -n "${step_a}" ] || [ -n "${step_b}" ]; then
+      echo "INFO: Launching step batch: ${step_a:-none} on ${GPU_GROUPS[0]} | ${step_b:-none} on ${GPU_GROUPS[1]}"
+    fi
+    pids=()
+    for ((g=0; g<${#GPU_GROUPS[@]}; g++)); do
+      step="${STEPS[$((i + g))]:-}"
+      if [ -z "${step}" ]; then
+        continue
+      fi
+      CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
+      if [ "$step" != "0" ] && [ ! -d "$CKPT_DIR" ]; then
+        echo "WARN: missing checkpoint at $CKPT_DIR, skipping"
+        continue
+      fi
+      EXP_NAME="${EXP_NAME_BASE}_step${step}_bm${BUCKET_MODE}_nb${NUM_BUCKETS}"
+      GPU_CSV="${GPU_GROUPS[$g]}"
+      EXP_NAME_RUN="${EXP_NAME}_g${GPU_CSV//,/}"
 
-  EXP_NAME_RUN="${EXP_NAME}"
-  if [ "${#GPU_GROUPS[@]}" -gt 1 ]; then
-    GPU_TAG="${GPU_CSV//,/}"
-    EXP_NAME_RUN="${EXP_NAME_RUN}_g${GPU_TAG}"
-  fi
+      echo "INFO: Launching step ${step} on GPUs [${GPU_CSV}] with exp_name=${EXP_NAME_RUN}"
+      if [ "$step" = "0" ]; then
+        echo "INFO: step 0 selected; running from init without resume_from_path"
+        CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
+          trainer.total_epochs=1 \
+          trainer.total_training_steps=1 \
+          trainer.save_freq=-1 \
+          trainer.test_freq=-1 \
+          +trainer.gradient_analysis_mode=True \
+          +trainer.gradient_analysis_every=1 \
+          trainer.experiment_name="${EXP_NAME_RUN}" \
+          "${COMMON_FLAGS[@]}" &
+      else
+        CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
+          trainer.total_epochs=1 \
+          trainer.total_training_steps=1 \
+          trainer.save_freq=-1 \
+          trainer.test_freq=-1 \
+          trainer.resume_mode=resume_path \
+          trainer.resume_from_path="${CKPT_DIR}" \
+          +trainer.gradient_analysis_mode=True \
+          +trainer.gradient_analysis_every=1 \
+          trainer.experiment_name="${EXP_NAME_RUN}" \
+          "${COMMON_FLAGS[@]}" &
+      fi
+      pids+=($!)
+    done
+    if [ "${#pids[@]}" -gt 0 ]; then
+      wait "${pids[@]}"
+    fi
+  done
+else
+  for step in "${STEPS[@]}"; do
+    CKPT_DIR="${OUTPUT_DIR}/global_step_${step}"
+    if [ "$step" != "0" ] && [ ! -d "$CKPT_DIR" ]; then
+      echo "WARN: missing checkpoint at $CKPT_DIR, skipping"
+      continue
+    fi
+    EXP_NAME="${EXP_NAME_BASE}_step${step}_bm${BUCKET_MODE}_nb${NUM_BUCKETS}"
+    GPU_CSV="${GPU_GROUPS[0]}"
+    EXP_NAME_RUN="${EXP_NAME}"
 
-  echo "INFO: Launching step ${step} on GPUs [${GPU_CSV}] with exp_name=${EXP_NAME_RUN}"
-  CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
-    trainer.total_epochs=1 \
-    trainer.total_training_steps=1 \
-    trainer.save_freq=-1 \
-    trainer.test_freq=-1 \
-    trainer.resume_mode=resume_path \
-    trainer.resume_from_path="${CKPT_DIR}" \
-    +trainer.gradient_analysis_mode=True \
-    +trainer.gradient_analysis_every=1 \
-    trainer.experiment_name="${EXP_NAME_RUN}" \
-    "${COMMON_FLAGS[@]}"
-  step_index=$((step_index + 1))
-done
+    echo "INFO: Launching step ${step} on GPUs [${GPU_CSV}] with exp_name=${EXP_NAME_RUN}"
+    if [ "$step" = "0" ]; then
+      echo "INFO: step 0 selected; running from init without resume_from_path"
+      CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
+        trainer.total_epochs=1 \
+        trainer.total_training_steps=1 \
+        trainer.save_freq=-1 \
+        trainer.test_freq=-1 \
+        +trainer.gradient_analysis_mode=True \
+        +trainer.gradient_analysis_every=1 \
+        trainer.experiment_name="${EXP_NAME_RUN}" \
+        "${COMMON_FLAGS[@]}"
+    else
+      CUDA_VISIBLE_DEVICES="${GPU_CSV}" python3 train.py --config-name "${ENV}" \
+        trainer.total_epochs=1 \
+        trainer.total_training_steps=1 \
+        trainer.save_freq=-1 \
+        trainer.test_freq=-1 \
+        trainer.resume_mode=resume_path \
+        trainer.resume_from_path="${CKPT_DIR}" \
+        +trainer.gradient_analysis_mode=True \
+        +trainer.gradient_analysis_every=1 \
+        trainer.experiment_name="${EXP_NAME_RUN}" \
+        "${COMMON_FLAGS[@]}"
+    fi
+  done
+fi

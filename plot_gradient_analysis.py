@@ -2,10 +2,11 @@ import wandb
 import matplotlib.pyplot as plt
 import os
 import json
+import argparse
 
 # CONFIGURATION
-WANDB_PATH = "deimos-xing/AGEN_gradient_analysis/mfcmeyxt"
-BUCKETS = [
+WANDB_PATH = "deimos-xing/AGEN_gradient_analysis/opinzice"
+DEFAULT_BUCKETS = [
     "bucket_1",
     "bucket_2",
     "bucket_3",
@@ -18,7 +19,28 @@ BUCKETS = [
 COMPONENTS = ["kl", "entropy", "task"]
 LOSS_COMPONENTS = ["policy", "entropy", "kl", "total"]
 DEFAULT_OUTPUT_DIR = "gradient_plots"
-OUTPUT_DIR = os.environ.get("PLOT_OUTPUT_DIR", DEFAULT_OUTPUT_DIR)
+
+def _sanitize_dir_name(name: str) -> str:
+    return "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in name)
+
+def _bucket_sort_key(bucket_name: str):
+    if bucket_name.startswith("bucket_"):
+        suffix = bucket_name.split("_", 1)[1]
+        if suffix.isdigit():
+            return (0, int(suffix))
+    return (1, bucket_name)
+
+def _extract_buckets(metric_source: dict) -> list[str]:
+    buckets = set()
+    for key in metric_source.keys():
+        if not key.startswith("grad_norm/bucket_"):
+            continue
+        parts = key.split("/")
+        if len(parts) >= 2:
+            buckets.add(parts[1])
+    if not buckets:
+        return DEFAULT_BUCKETS
+    return sorted(buckets, key=_bucket_sort_key)
 TARGET_STEPS = "all"  # "all", list like [1, 11], or None to auto-pick lowest step with bucket data
 
 def get_bucket_label(bucket_name):
@@ -28,10 +50,18 @@ def get_bucket_label(bucket_name):
     return bucket_name
 
 def main():
-    print(f"Connecting to WandB run: {WANDB_PATH}...")
+    parser = argparse.ArgumentParser(description="Plot gradient analysis metrics from a W&B run.")
+    parser.add_argument(
+        "--wandb-path",
+        default=WANDB_PATH,
+        help="W&B run path like entity/project/run_id",
+    )
+    args = parser.parse_args()
+
+    print(f"Connecting to WandB run: {args.wandb_path}...")
     api = wandb.Api()
     try:
-        run = api.run(WANDB_PATH)
+        run = api.run(args.wandb_path)
     except Exception as e:
         print(f"Error accessing run: {e}")
         return
@@ -62,9 +92,9 @@ def main():
         print("Warning: no grad_norm metrics found in history; falling back to run summary.")
         step_metrics = {"summary": summary}
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    x_labels = [get_bucket_label(b) for b in BUCKETS]
-
+    default_dir = f"gradient_analysis_{_sanitize_dir_name(run.name)}_{run.id}"
+    output_dir = os.environ.get("PLOT_OUTPUT_DIR", default_dir)
+    os.makedirs(output_dir, exist_ok=True)
     titles = {
         "kl": "KL Gradient Norm",
         "entropy": "Entropy Gradient Norm",
@@ -95,12 +125,14 @@ def main():
 
     for step_key in steps_to_plot:
         metric_source = step_metrics[step_key]
+        buckets = _extract_buckets(metric_source)
+        x_labels = [get_bucket_label(b) for b in buckets]
         step_tag = f"step_{step_key}"
-        output_file = os.path.join(OUTPUT_DIR, f"gradient_analysis_plots_{step_tag}.png")
-        output_file_loss = os.path.join(OUTPUT_DIR, f"gradient_analysis_loss_plots_{step_tag}.png")
-        output_file_rv = os.path.join(OUTPUT_DIR, f"gradient_analysis_reward_std_{step_tag}.png")
-        output_file_normed = os.path.join(OUTPUT_DIR, f"gradient_analysis_normed_grads_{step_tag}.png")
-        output_file_summary = os.path.join(OUTPUT_DIR, f"gradient_analysis_summary_{step_tag}.png")
+        output_file = os.path.join(output_dir, f"gradient_analysis_plots_{step_tag}.png")
+        output_file_loss = os.path.join(output_dir, f"gradient_analysis_loss_plots_{step_tag}.png")
+        output_file_rv = os.path.join(output_dir, f"gradient_analysis_reward_std_{step_tag}.png")
+        output_file_normed = os.path.join(output_dir, f"gradient_analysis_normed_grads_{step_tag}.png")
+        output_file_summary = os.path.join(output_dir, f"gradient_analysis_summary_{step_tag}.png")
 
         # Create subplots for gradient norms
         fig, axes = plt.subplots(1, 3, figsize=(20, 6))
@@ -112,14 +144,14 @@ def main():
                 "min": metric_source.get(f"grad_norm/{b}/reward_std_min", 0),
                 "max": metric_source.get(f"grad_norm/{b}/reward_std_max", 0),
             }
-            for b in BUCKETS
+            for b in buckets
         }
-        bucket_rv_values = {b: [] for b in BUCKETS}
-        table_keys = [f"grad_norm/{b}/group_rv_table" for b in BUCKETS]
+        bucket_rv_values = {b: [] for b in buckets}
+        table_keys = [f"grad_norm/{b}/group_rv_table" for b in buckets]
         for row in run.scan_history(keys=["_step", *table_keys]):
             if row.get("_step") != step_key:
                 continue
-            for b in BUCKETS:
+            for b in buckets:
                 key = f"grad_norm/{b}/group_rv_table"
                 table_meta = row.get(key)
                 if not isinstance(table_meta, dict) or "path" not in table_meta:
@@ -139,14 +171,14 @@ def main():
                 except Exception:
                     continue
         legend_lines = []
-        for label, bucket in zip(x_labels, BUCKETS):
+        for label, bucket in zip(x_labels, buckets):
             rv = bucket_rv.get(bucket, {})
             legend_lines.append(
                 f"{label}: mean={rv.get('mean', 0):.3f} min={rv.get('min', 0):.3f} max={rv.get('max', 0):.3f}"
             )
         for ax, comp, color in zip(axes, COMPONENTS, colors):
             y_values = []
-            for bucket in BUCKETS:
+            for bucket in buckets:
                 key = f"grad_norm/{bucket}/{comp}"
                 val = metric_source.get(key, 0)
                 y_values.append(val)
@@ -174,7 +206,7 @@ def main():
 
         for ax, comp, color in zip(axes2.flatten(), LOSS_COMPONENTS, loss_colors):
             y_values = []
-            for bucket in BUCKETS:
+            for bucket in buckets:
                 key = f"grad_norm/{bucket}/loss/{comp}"
                 val = metric_source.get(key, 0)
                 y_values.append(val)
@@ -205,7 +237,7 @@ def main():
 
     # Create plot for per-bucket mean reward variance (std)
         rv_values = []
-        for bucket in BUCKETS:
+        for bucket in buckets:
             rv_values.append(metric_source.get(f"grad_norm/{bucket}/reward_std_mean", 0))
         if any(v != 0 for v in rv_values):
             fig3, ax3 = plt.subplots(1, 1, figsize=(10, 5))
@@ -238,7 +270,7 @@ def main():
         for ax, comp in zip(axes4, COMPONENTS):
             per_sample = []
             per_token = []
-            for bucket in BUCKETS:
+            for bucket in buckets:
                 per_sample.append(metric_source.get(f"grad_norm/{bucket}/per_sample/{comp}", 0))
                 per_token.append(metric_source.get(f"grad_norm/{bucket}/per_token/{comp}", 0))
 
@@ -272,12 +304,12 @@ def main():
         plt.close(fig4)
 
         # Summary 3-panel plot with available aggregates
-        rv_means = [bucket_rv[b]["mean"] for b in BUCKETS]
-        rv_mins = [bucket_rv[b]["min"] for b in BUCKETS]
-        rv_maxs = [bucket_rv[b]["max"] for b in BUCKETS]
-        task_grads = [metric_source.get(f"grad_norm/{b}/task", 0) for b in BUCKETS]
-        kl_grads = [metric_source.get(f"grad_norm/{b}/kl", 0) for b in BUCKETS]
-        ent_grads = [metric_source.get(f"grad_norm/{b}/entropy", 0) for b in BUCKETS]
+        rv_means = [bucket_rv[b]["mean"] for b in buckets]
+        rv_mins = [bucket_rv[b]["min"] for b in buckets]
+        rv_maxs = [bucket_rv[b]["max"] for b in buckets]
+        task_grads = [metric_source.get(f"grad_norm/{b}/task", 0) for b in buckets]
+        kl_grads = [metric_source.get(f"grad_norm/{b}/kl", 0) for b in buckets]
+        ent_grads = [metric_source.get(f"grad_norm/{b}/entropy", 0) for b in buckets]
         reg_grads = [k + e for k, e in zip(kl_grads, ent_grads)]
 
         fig5, axes5 = plt.subplots(1, 3, figsize=(20, 6))
@@ -285,9 +317,9 @@ def main():
 
         # Left: RV mean with min/max error bars per bucket
         ax = axes5[0]
-        use_boxplot = any(bucket_rv_values[b] for b in BUCKETS)
+        use_boxplot = any(bucket_rv_values[b] for b in buckets)
         if use_boxplot:
-            data = [bucket_rv_values[b] for b in BUCKETS]
+            data = [bucket_rv_values[b] for b in buckets]
             data_mins = [min(v) if v else 0 for v in data]
             data_maxs = [max(v) if v else 0 for v in data]
             # sanity check: compare against logged min/max (per-sample)
@@ -302,9 +334,10 @@ def main():
             ax.boxplot(data, tick_labels=x_labels, showfliers=False)
             ax.set_title("RV by Bucket (Boxplot)", fontsize=13, fontweight="bold")
         else:
+            # Guard against negative error bars from inconsistent min/max logging.
             yerr = [
-                [m - lo for m, lo in zip(rv_means, rv_mins)],
-                [hi - m for m, hi in zip(rv_means, rv_maxs)],
+                [max(0.0, m - lo) for m, lo in zip(rv_means, rv_mins)],
+                [max(0.0, hi - m) for m, hi in zip(rv_means, rv_maxs)],
             ]
             ax.errorbar(x_labels, rv_means, yerr=yerr, fmt="o-", color="#6c5ce7", ecolor="#2d3436", capsize=4)
             ax.set_title("RV by Bucket (Mean ± Min/Max)", fontsize=13, fontweight="bold")

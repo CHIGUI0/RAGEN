@@ -53,7 +53,7 @@ main() {
     eval "$(conda shell.bash hook)"
     conda activate ragen
 
-    pip install -U pip setuptools wheel
+    pip install -U pip "setuptools<70.0.0" wheel
     pip install numpy ninja packaging psutil
 
     # Install package in editable mode
@@ -110,6 +110,7 @@ main() {
     # Install remaining requirements
     print_step "Installing additional requirements..."
     pip install -r requirements.txt
+    pip install transformers==4.48.2
 
     print_step "Downloading data..."
     python scripts/download_data.py

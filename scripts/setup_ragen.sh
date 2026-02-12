@@ -69,8 +69,8 @@ main() {
     pip install -e .
 
     # Install spatial environment dependencies
-    print_step "Installing spatial environment dependencies..."
-    pip install -e ragen/env/spatial/Base
+    # print_step "Installing spatial environment dependencies..."
+    # pip install -e ragen/env/spatial/Base
     
     # Install PyTorch with CUDA if available
     if check_cuda; then

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import json
 import argparse
+import csv
 
 # CONFIGURATION
 WANDB_PATH = "deimos-xing/AGEN_gradient_analysis/opinzice"
@@ -133,6 +134,8 @@ def main():
         output_file_rv = os.path.join(output_dir, f"gradient_analysis_reward_std_{step_tag}.png")
         output_file_normed = os.path.join(output_dir, f"gradient_analysis_normed_grads_{step_tag}.png")
         output_file_summary = os.path.join(output_dir, f"gradient_analysis_summary_{step_tag}.png")
+        output_metrics_json = os.path.join(output_dir, f"gradient_analysis_metrics_{step_tag}.json")
+        output_rv_table = os.path.join(output_dir, f"gradient_analysis_bucket_rv_table_{step_tag}.csv")
 
         # Create subplots for gradient norms
         fig, axes = plt.subplots(1, 3, figsize=(20, 6))
@@ -170,6 +173,22 @@ def main():
                             bucket_rv_values[b].append(float(row_vals[2]))
                 except Exception:
                     continue
+        # Save raw metric snapshot and RV table values for this step
+        try:
+            with open(output_metrics_json, "w") as f:
+                json.dump(metric_source, f, indent=2, sort_keys=True)
+        except Exception as e:
+            print(f"Warning: failed to write metrics json: {e}")
+
+        try:
+            with open(output_rv_table, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["bucket", "reward_std"])
+                for b in buckets:
+                    for rv in bucket_rv_values[b]:
+                        writer.writerow([b, rv])
+        except Exception as e:
+            print(f"Warning: failed to write rv table csv: {e}")
         legend_lines = []
         for label, bucket in zip(x_labels, buckets):
             rv = bucket_rv.get(bucket, {})

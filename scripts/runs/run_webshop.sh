@@ -271,9 +271,11 @@ run_experiment() {
         "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2"
         "actor_rollout_ref.actor.filter_loss_scaling=none"
         "actor_rollout_ref.rollout.gpu_memory_utilization=${GPU_MEMORY_UTILIZATION}"
-        "lora.rank=16"
-        "lora.alpha=32"
-        "lora.target_modules=all-linear"
+        # "lora.rank=16"
+        # "lora.alpha=32"
+        # "lora.target_modules=all-linear"
+        "agent_proxy.context_window_mode=limited_multi_turn"
+        "agent_proxy.max_context_window=3"
     )
 
     local env_overrides=()
@@ -290,7 +292,7 @@ run_experiment() {
     algo_overrides=$(get_algo_overrides "$algo")
     read -r -a algo_args <<< "$algo_overrides"
 
-    local name="${task}-${algo}-${filter}-${MODEL_NAME}"
+    local name="${task}-${algo}-${filter}-${MODEL_NAME}-lookback3"
     local task_dir="${RESULT_ROOT}/diff_algo_${task}_${MODEL_NAME}"
     local log_path="${task_dir}/${name}.log"
     local checkpoint_dir="${CHECKPOINT_ROOT}/${task}/${algo}/${filter}/${name}"

@@ -100,23 +100,23 @@ Controlled via `actor_rollout_ref.actor.filter_loss_scaling`:
 To prevent training on collapsed or uninformative rollout groups, we implemented an early stopping mechanism based on reward variance.
 
 ### Concept
-The trainer monitors the reward standard deviation (`rollout/in_group_reward_std`) across all rollout attempts (successful steps and retries).
+The trainer monitors the reward standard deviation (`rollout/in_group_reward_std`) at the successful training-step level.
 
-1.  **Baseline Generation**: During the first 10 successful steps, the trainer calculates the average reward variance ($V_{base}$).
-2.  **Monitoring**: A sliding window of the last 10 rollout attempts is maintained.
-3.  **Stopping Condition**: If all 10 consecutive attempts have a reward variance less than 10% of $V_{base}$, training is stopped.
-    $$ \forall i \in \{1 \dots 10\}: V_i < 0.1 \times V_{base} \implies \text{Stop Training} $$
+1.  **Baseline Generation**: During the first 10 successful training steps, the trainer calculates the average reward variance ($V_{base}$).
+2.  **Monitoring**: A sliding window of the last 5 successful training steps is maintained (starts after baseline is ready).
+3.  **Stopping Condition**: If all 5 consecutive step variances are less than 10% of $V_{base}$, training is stopped.
+    $$ \forall i \in \{1 \dots 5\}: V_i < 0.1 \times V_{base} \implies \text{Stop Training} $$
 
 ### Implementation
 -   **Baseline**: Average of `rollout/in_group_reward_std` for `global_steps` 1-10.
--   **Sliding Window**: Uses a `collections.deque(maxlen=10)` to track the most recent attempts across multiple global steps if retries occur.
--   **Metric**: Logs `train/early_stopped: 1.0` when triggered.
+-   **Sliding Window**: Uses a `collections.deque(maxlen=5)` to track the most recent successful training steps.
+-   **Metric**: Logs `early_stopped/reward_variance_collapse: 1.0` when triggered.
 
 ### 2. Success-Based Early Stopping
 To prevent wasting compute on environments where the model is failing to learn, we implemented an early stopping mechanism based on validation success rates.
 
 - **Condition**: If the success rate for a specific environment (e.g., `val-env/CoordSokoban/success`) remains below **1% (0.01)** for **5 consecutive** validation steps, the training is stopped.
-- **Metric**: Logs `train/early_stopped: 1.0` when triggered.
+- **Metric**: Logs `early_stopped/low_validation_success: 1.0` when triggered.
 
 ---
 
@@ -165,4 +165,3 @@ If you use `rollout_filter_metric=entropy`, you might encounter an `AssertionErr
 
 -   **Cause**: The `EntropyRolloutFilter` recomputes log probabilities to calculate entropy and returns them in the `DataProto`. The trainer also recomputes log probabilities for the PPO update. `DataProto.union` rejects keys that already exist if they are not the exact same tensor instance.
 -   **Resolution**: The filter has been updated to only include the `entropys` key and prune the redundant `old_log_probs` before unioning with the main batch.
-

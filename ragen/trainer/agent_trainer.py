@@ -253,6 +253,11 @@ class RayAgentTrainer(VerlRayPPOTrainer):
         self.consecutive_variances = collections.deque(maxlen=5)
         self.consecutive_low_success = collections.defaultdict(int)
         self.early_stopped = False
+        self.early_stop_type = None
+
+    def _early_stop_metric_key(self) -> str:
+        stop_type = self.early_stop_type if self.early_stop_type else "unknown"
+        return f"early_stopped/{stop_type}"
 
         
     def _create_dataloader(self, train_dataset, val_dataset, collate_fn, train_sampler):
@@ -675,23 +680,6 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                         else:
                             batch.meta_info["filter_kept_ratio"] = 1.0
 
-                        # Early stopping logic: track reward variance of every attempt
-                        if "rollout/in_group_reward_std" in metrics:
-                            current_var = metrics["rollout/in_group_reward_std"]
-                            if isinstance(current_var, torch.Tensor):
-                                current_var = current_var.item()
-                            self.consecutive_variances.append(current_var)
-                            
-                            if self.base_variance is not None and len(self.consecutive_variances) == 5:
-                                if all(v < 0.1 * self.base_variance for v in self.consecutive_variances):
-                                    print(f"\n[Early Stopping] Reward variance collapsed!")
-                                    print(f"Base variance (mean of first 10 steps): {self.base_variance:.6f}")
-                                    print(f"Recent variances: {[f'{v:.6f}' for v in self.consecutive_variances]}")
-                                    self.early_stopped = True
-                                    break
-
-
-                        
                         if len(batch) > 0:
                             break
                         else:
@@ -703,7 +691,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                 if self.early_stopped:
                     print("[Early Stopping] Stopping training.")
                     # Ensure we log the metric before finishing
-                    metrics.update({"train/early_stopped": 1.0})
+                    metrics.update({self._early_stop_metric_key(): 1.0})
                     logger.log(data=metrics, step=self.global_steps)
                     break
 
@@ -730,6 +718,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                 metrics.update({"train/" + key: value for key, value in batch.meta_info["metrics"].items()})
 
                 # Record successful step variance for base variance calculation
+                # and run step-level reward-variance early stopping.
                 if "rollout/in_group_reward_std" in metrics and len(self.first_10_steps_variances) < 10:
                     current_var = metrics["rollout/in_group_reward_std"]
                     if isinstance(current_var, torch.Tensor):
@@ -737,7 +726,29 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                     self.first_10_steps_variances.append(current_var)
                     if len(self.first_10_steps_variances) == 10:
                         self.base_variance = sum(self.first_10_steps_variances) / 10
+                        # Start counting collapse window only after baseline is ready.
+                        self.consecutive_variances.clear()
                         print(f"\n[Early Stopping] Base variance calculated from first 10 steps: {self.base_variance:.6f}")
+                elif "rollout/in_group_reward_std" in metrics and self.base_variance is not None:
+                    current_var = metrics["rollout/in_group_reward_std"]
+                    if isinstance(current_var, torch.Tensor):
+                        current_var = current_var.item()
+                    self.consecutive_variances.append(current_var)
+
+                    if len(self.consecutive_variances) == 5:
+                        threshold = 0.1 * self.base_variance
+                        if all(v < threshold for v in self.consecutive_variances):
+                            print(f"\n[Early Stopping] Reward variance collapsed!")
+                            print(f"Base variance (mean of first 10 successful steps): {self.base_variance:.6f}")
+                            print(f"Recent step variances: {[f'{v:.6f}' for v in self.consecutive_variances]}")
+                            self.early_stopped = True
+                            self.early_stop_type = "reward_variance_collapse"
+
+                if self.early_stopped:
+                    print("[Early Stopping] Stopping training.")
+                    metrics.update({self._early_stop_metric_key(): 1.0})
+                    logger.log(data=metrics, step=self.global_steps)
+                    break
 
                 inputs, outputs, scores = _process_batch_for_logging(batch)
                 # self._maybe_log_generations(inputs=inputs, outputs=outputs, scores=scores, _type="train")
@@ -969,10 +980,11 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                             if self.consecutive_low_success[key] >= 5:
                                 print(f"\n[Early Stopping] Model failed to reach 1% success on {key} for 5 consecutive steps.")
                                 self.early_stopped = True
+                                self.early_stop_type = "low_validation_success"
                                 break
                     
                     if self.early_stopped:
-                        metrics.update({"train/early_stopped": 1.0})
+                        metrics.update({self._early_stop_metric_key(): 1.0})
                         logger.log(data=metrics, step=self.global_steps)
                         break
 

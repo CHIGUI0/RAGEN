@@ -17,7 +17,6 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
-from tensordict import TensorDict
 
 from verl import DataProto
 
@@ -516,17 +515,17 @@ class CollapseDetector:
             cross_position_ids = torch.cat(cross_position_ids_list, dim=0)
 
             # Create cross batch DataProto
-            cross_batch_data = TensorDict({
-                "input_ids": cross_input_ids,
-                "attention_mask": cross_attention_mask,
-                "position_ids": cross_position_ids,
-                "responses": reasoning_ids,
-            }, batch_size=[NK])
-
-            cross_batch = DataProto(
-                batch=cross_batch_data,
-                non_tensor_batch={},
+            # Collapse metrics may sample any NK; enable DataProto auto padding so
+            # distributed chunking does not require NK % dp_size == 0.
+            cross_batch = DataProto.from_dict(
+                tensors={
+                    "input_ids": cross_input_ids,
+                    "attention_mask": cross_attention_mask,
+                    "position_ids": cross_position_ids,
+                    "responses": reasoning_ids,
+                },
                 meta_info=batch.meta_info.copy() if batch.meta_info else {},
+                auto_padding=True,
             )
 
             # Compute log probabilities

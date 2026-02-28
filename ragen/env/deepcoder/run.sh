@@ -4,8 +4,8 @@ set -e
 cd /workspace/RAGEN_temp
 export PYTHONPATH="$PWD:$PWD/verl"
 
-python train.py --config-name _11_deepcoder \
-    model_path="Qwen/Qwen2.5-3B-Instruct"
+python train.py --config-name _10_deepcoder \
+    model_path="Qwen/Qwen2.5-3B-Instruct" \
     trainer.project_name=deepcoder_P1 \
     trainer.experiment_name=deepcoder_100turns_test \
     trainer.total_training_steps=100 \

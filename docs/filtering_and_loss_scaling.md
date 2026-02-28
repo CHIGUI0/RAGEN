@@ -103,13 +103,13 @@ To prevent training on collapsed or uninformative rollout groups, we implemented
 The trainer monitors the reward standard deviation (`rollout/in_group_reward_std`) at the successful training-step level.
 
 1.  **Baseline Generation**: During the first 10 successful training steps, the trainer calculates the average reward variance ($V_{base}$).
-2.  **Monitoring**: A sliding window of the last 5 successful training steps is maintained (starts after baseline is ready).
-3.  **Stopping Condition**: If all 5 consecutive step variances are less than 10% of $V_{base}$, training is stopped.
-    $$ \forall i \in \{1 \dots 5\}: V_i < 0.1 \times V_{base} \implies \text{Stop Training} $$
+2.  **Monitoring**: A sliding window of the last 10 successful training steps is maintained (starts after baseline is ready).
+3.  **Stopping Condition**: If all 10 consecutive step variances are less than 10% of $V_{base}$, training is stopped.
+    $$ \forall i \in \{1 \dots 10\}: V_i < 0.1 \times V_{base} \implies \text{Stop Training} $$
 
 ### Implementation
 -   **Baseline**: Average of `rollout/in_group_reward_std` for `global_steps` 1-10.
--   **Sliding Window**: Uses a `collections.deque(maxlen=5)` to track the most recent successful training steps.
+-   **Sliding Window**: Uses a `collections.deque(maxlen=10)` to track the most recent successful training steps.
 -   **Metric**: Logs `early_stopped/reward_variance_collapse: 1.0` when triggered.
 
 ### 2. Success-Based Early Stopping

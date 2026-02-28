@@ -18,7 +18,7 @@
 
 训练中存在两个 early stop 条件，任一触发即终止训练（`agent_trainer.py:678-708, 961-977`）：
 
-**条件 A：Reward Variance Collapse。** 前 10 个成功训练 step 的 `rollout/in_group_reward_std` 取均值作为 baseline variance。此后若**连续 5 步**的 variance 均 < baseline 的 10%，则触发。含义：策略已塌缩，所有 rollout 给出几乎相同的 reward。
+**条件 A：Reward Variance Collapse。** 前 10 个成功训练 step 的 `rollout/in_group_reward_std` 取均值作为 baseline variance。此后若**连续 10 步**的 variance 均 < baseline 的 10%，则触发。含义：策略已塌缩，所有 rollout 给出几乎相同的 reward。
 
 **条件 B：Validation Success 过低。** 每 `test_freq=10` 步做一次验证。若 `val-env/*/success < 1%` 连续 5 次验证（即跨 50 个训练 step），则触发。含义：模型已崩溃，完全无法完成任务。
 

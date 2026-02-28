@@ -165,7 +165,8 @@ python train.py --config-name <CONFIG_NAME> ...
 - `model_path=Qwen/Qwen2.5-3B`
 - `trainer.project_name=ragen_release_frozenlake_slipper_rate_sweep`
 - Sweep 变量：
-- `SLIPPER_RATES=0,50,80,90,95,100`
+- `SLIPPER_RATES=100,50,20,10,5,2,0`
+- 等价写法：`slipper_rate ∈ {100%, 50%, 20%, 10%, 5%, 2%, 0%}`
 - `FILTER_MODES=filter,nofilter`
 - rate 归一化：支持 `50` / `0.5` / `50%` 三种写法
 - 环境随机性映射：`success_rate = 1 - slipper_rate`

@@ -9,7 +9,7 @@ MODEL_PATH="Qwen/${MODEL_NAME}"
 PROJECT_NAME="ragen_release_frozenlake_slipper_rate_sweep"
 CONFIG_NAME="_3_frozen_lake"
 SAVE_FREQ=-1
-SLIPPER_RATES="0,50,80,90,95,100"
+SLIPPER_RATES="100,50,20,10,5,2,0"
 FILTER_MODES="filter,nofilter"
 FILTER_TOP_P="0.9"
 NOFILTER_TOP_P="1.0"
@@ -27,8 +27,8 @@ Usage: $0 [options]
 Options:
   --steps N                     Training steps (default: 400)
   --slipper-rate LIST           Comma-separated slipper rates. Supports:
-                                percentages (0,50,80,90,95,100),
-                                ratios (0.0,0.5,0.8...), and '%' suffix.
+                                percentages (100,50,20,10,5,2,0),
+                                ratios (1.0,0.5,0.2...), and '%' suffix.
   --filter-modes LIST           Comma-separated modes: filter,nofilter (default: both)
   --filter-top-p V              top-p for filter mode (default: 0.9)
   --nofilter-top-p V            top-p for nofilter mode (default: 1.0)

@@ -15,7 +15,8 @@ So larger `slipper_rate` means more transition randomness.
 - Config: `_3_frozen_lake`
 - Project name: `ragen_release_frozenlake_slipper_rate_sweep`
 - Training steps: `400`
-- Slipper sweep: `0,50,80,90,95,100`
+- Slipper sweep (default): `100,50,20,10,5,2,0`
+- Equivalent set: `slipper_rate ∈ {100%, 50%, 20%, 10%, 5%, 2%, 0%}`
 - Modes: `filter,nofilter`
 - Filter setup:
   - `filter`: `top_p=0.9`, `rollout_filter_include_zero=False`
@@ -50,7 +51,7 @@ So larger `slipper_rate` means more transition randomness.
 Current naming only records `slip` (not `sr`) and uses compact decimal labels:
 
 - `0.500000` -> `slip0p5`
-- `0.950000` -> `slip0p95`
+- `0.020000` -> `slip0p02`
 
 Experiment/log name format:
 
@@ -59,7 +60,7 @@ Experiment/log name format:
 Examples:
 
 - `frozenlake_nofilter_slip0p5-Qwen2.5-3B`
-- `frozenlake_filter_slip0p95-Qwen2.5-3B`
+- `frozenlake_filter_slip0p02-Qwen2.5-3B`
 
 ## Running
 
@@ -73,7 +74,7 @@ Run one mode and a custom subset:
 
 ```bash
 bash scripts/runs/run_frozen_lake_slipper_rate_sweep.sh \
-  --slipper-rate 50,80,95 \
+  --slipper-rate 50,20,5 \
   --filter-modes nofilter \
   --gpus 0 \
   --cooldown 30 \
@@ -82,9 +83,9 @@ bash scripts/runs/run_frozen_lake_slipper_rate_sweep.sh \
 
 `--slipper-rate` accepts:
 
-- percentages: `50,80,95`
-- ratios: `0.5,0.8,0.95`
-- percent suffix: `50%,80%,95%`
+- percentages: `100,50,20,10,5,2,0`
+- ratios: `1.0,0.5,0.2,0.1,0.05,0.02,0.0`
+- percent suffix: `100%,50%,20%,10%,5%,2%,0%`
 
 ## Outputs
 

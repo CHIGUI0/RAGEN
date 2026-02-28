@@ -6,7 +6,7 @@ set -euo pipefail
 STEPS=400
 MODEL_NAME="Qwen2.5-3B"
 MODEL_PATH="Qwen/${MODEL_NAME}"
-PROJECT_NAME="ragen_new_top_p_sweep"
+PROJECT_NAME="ragen_release_top_p_sweep"
 CONFIG_NAME="_2_sokoban"
 SAVE_FREQ=-1
 ROLL_FILTER_VALUES="1.0,0.98,0.95,0.9,0.8,0.6,0.4,nofilter"
@@ -15,6 +15,7 @@ GPUS_PROVIDED=false
 GPUS_PER_EXP=1
 COOLDOWN_SECONDS=0
 GPU_MEMORY_UTILIZATION=0.5
+RAY_NUM_CPUS=16
 
 usage() {
     cat <<'EOF'
@@ -24,6 +25,7 @@ Options:
   --rollout_filter_value LIST   Comma-separated top_p values (default: 1.0,0.98,0.95,0.9,0.8,0.6,0.4,nofilter)
   --gpus LIST                   Comma-separated GPU IDs (auto-detected if omitted)
   --gpus-per-exp N              GPUs per experiment (default: 1)
+  --ray-num-cpus N              Max CPUs per task for ray.init (default: 16)
   --gpu-memory-utilization V    GPU memory utilization for rollouts (default: 0.5)
   --save-freq N                 Checkpoint save frequency (default: -1)
   -h, --help                    Show this help message
@@ -41,6 +43,8 @@ while [ $# -gt 0 ]; do
         --gpus=*) IFS=',' read -r -a GPUS <<< "${1#*=}"; GPUS_PROVIDED=true; shift ;;
         --gpus-per-exp) GPUS_PER_EXP="$2"; shift 2 ;;
         --gpus-per-exp=*) GPUS_PER_EXP="${1#*=}"; shift ;;
+        --ray-num-cpus) RAY_NUM_CPUS="$2"; shift 2 ;;
+        --ray-num-cpus=*) RAY_NUM_CPUS="${1#*=}"; shift ;;
         --gpu-memory-utilization) GPU_MEMORY_UTILIZATION="$2"; shift 2 ;;
         --gpu-memory-utilization=*) GPU_MEMORY_UTILIZATION="${1#*=}"; shift ;;
         --save-freq) SAVE_FREQ="$2"; shift 2 ;;
@@ -76,6 +80,10 @@ if (( ${#GPUS[@]} < GPUS_PER_EXP )); then
 fi
 if (( ${#GPUS[@]} % GPUS_PER_EXP != 0 )); then
     echo "Error: GPU count (${#GPUS[@]}) must be divisible by --gpus-per-exp (${GPUS_PER_EXP})"
+    exit 1
+fi
+if ! [[ "$RAY_NUM_CPUS" =~ ^[0-9]+$ ]] || [ "$RAY_NUM_CPUS" -lt 1 ]; then
+    echo "Error: --ray-num-cpus must be a positive integer"
     exit 1
 fi
 
@@ -186,7 +194,7 @@ mkdir -p "$CHECKPOINT_ROOT"
 
 echo "=== Top-p Sweep Runner (${MODEL_NAME}): $(date) ===" | tee "$LOG_FILE"
 echo "Values: ${ROLL_FILTER_VALUES} | Steps: ${STEPS} | GPUs per exp: ${GPU_LOG_LABEL}" | tee -a "$LOG_FILE"
-echo "Groups: ${GPU_GROUPS[*]} | GPU memory util: ${GPU_MEMORY_UTILIZATION} | save_freq: ${SAVE_FREQ}" | tee -a "$LOG_FILE"
+echo "Groups: ${GPU_GROUPS[*]} | GPU memory util: ${GPU_MEMORY_UTILIZATION} | ray_num_cpus: ${RAY_NUM_CPUS} | save_freq: ${SAVE_FREQ}" | tee -a "$LOG_FILE"
 
 parse_rollout_values() {
     IFS=',' read -r -a raw <<< "$ROLL_FILTER_VALUES"
@@ -241,15 +249,21 @@ run_experiment() {
         trainer.logger="['console','wandb']" \
         trainer.val_before_train=True \
         trainer.n_gpus_per_node="${gpus_per_exp}" \
+        ray_kwargs.ray_init.num_cpus="${RAY_NUM_CPUS}" \
         system.CUDA_VISIBLE_DEVICES="'${gpu_list}'" \
         algorithm.adv_estimator=gae \
         actor_rollout_ref.actor.use_kl_loss=True \
         actor_rollout_ref.actor.kl_loss_coef=0.001 \
         actor_rollout_ref.actor.entropy_coeff=0.001 \
+        actor_rollout_ref.actor.entropy_from_logits_with_chunking=True \
         actor_rollout_ref.actor.filter_loss_scaling=none \
         actor_rollout_ref.actor.ppo_mini_batch_size=32 \
+        actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=4 \
+        actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=8 \
         critic.ppo_mini_batch_size=32 \
+        critic.ppo_micro_batch_size_per_gpu=4 \
         ppo_mini_batch_size=32 \
+        actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
         actor_rollout_ref.rollout.rollout_filter_strategy=top_p \
         actor_rollout_ref.rollout.rollout_filter_value=${filter_value} \
         actor_rollout_ref.rollout.rollout_filter_include_zero=${include_zero} \

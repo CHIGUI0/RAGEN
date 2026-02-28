@@ -1,66 +1,68 @@
 #!/bin/bash
-# Entropy coefficient sweep for sokoban + GAE, keeping KL loss fixed and top_p filtering.
+# FrozenLake slipper_rate sweep with fixed KL/Entropy and filter vs no-filter baselines.
 set -euo pipefail
 
 # Defaults
 STEPS=400
 MODEL_NAME="Qwen2.5-3B"
 MODEL_PATH="Qwen/${MODEL_NAME}"
-PROJECT_NAME="ragen_release_entropy_sweep"
-CONFIG_NAME="_2_sokoban"
+PROJECT_NAME="ragen_release_frozenlake_slipper_rate_sweep"
+CONFIG_NAME="_3_frozen_lake"
 SAVE_FREQ=-1
-ENTROPY_VALUES="0,0.001,0.003,0.01,0.03,0.1"
-ROLL_FILTER_INCLUDE_ZERO="True"
+SLIPPER_RATES="0,50,80,90,95,100"
+FILTER_MODES="filter,nofilter"
+FILTER_TOP_P="0.9"
+NOFILTER_TOP_P="1.0"
 GPUS=()
 GPUS_PROVIDED=false
 GPUS_PER_EXP=1
-COOLDOWN_SECONDS=0
+COOLDOWN_SECONDS=30
 GPU_MEMORY_UTILIZATION=0.5
 RAY_NUM_CPUS=16
+declare -A GPU_LABELS
 
 usage() {
     cat <<'EOF'
 Usage: $0 [options]
 Options:
   --steps N                     Training steps (default: 400)
-  --entropy-values LIST         Comma-separated entropy_coeff values (default: 0,0.001,0.003,0.01,0.03,0.1)
-  --rollout_filter_include_zero BOOL  Whether rollout_filter_include_zero (default: True)
-  --gpus LIST                   Comma-separated GPU IDs
+  --slipper-rate LIST           Comma-separated slipper rates. Supports:
+                                percentages (0,50,80,90,95,100),
+                                ratios (0.0,0.5,0.8...), and '%' suffix.
+  --filter-modes LIST           Comma-separated modes: filter,nofilter (default: both)
+  --filter-top-p V              top-p for filter mode (default: 0.9)
+  --nofilter-top-p V            top-p for nofilter mode (default: 1.0)
+  --gpus LIST                   Comma-separated GPU IDs (auto-detected if omitted)
   --gpus-per-exp N              GPUs per experiment (default: 1)
   --ray-num-cpus N              Max CPUs per task for ray.init (default: 16)
-  --gpu-memory-utilization V    GPU memory utilization for rollouts (default: 0.5)
+  --cooldown SECONDS            Cooldown between runs on same GPU group (default: 30)
+  --gpu-memory-utilization V    Rollout gpu_memory_utilization (default: 0.5)
   --save-freq N                 Checkpoint save frequency (default: -1)
-  -h, --help                    Show this help
+  -h, --help                    Show this help message
 EOF
     exit 0
-}
-
-parse_bool() {
-    local val="${1,,}"
-    case "$val" in
-        true|1|yes|y) echo "True" ;;
-        false|0|no|n) echo "False" ;;
-        *)
-            echo "Error: expected boolean, got '$1'" >&2
-            exit 1
-            ;;
-    esac
 }
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --steps) STEPS="$2"; shift 2 ;;
         --steps=*) STEPS="${1#*=}"; shift ;;
-        --entropy-values) ENTROPY_VALUES="$2"; shift 2 ;;
-        --entropy-values=*) ENTROPY_VALUES="${1#*=}"; shift ;;
-        --rollout_filter_include_zero) ROLL_FILTER_INCLUDE_ZERO=$(parse_bool "$2"); shift 2 ;;
-        --rollout_filter_include_zero=*) ROLL_FILTER_INCLUDE_ZERO=$(parse_bool "${1#*=}"); shift ;;
+        --slipper-rate) SLIPPER_RATES="$2"; shift 2 ;;
+        --slipper-rate=*) SLIPPER_RATES="${1#*=}"; shift ;;
+        --filter-modes) FILTER_MODES="$2"; shift 2 ;;
+        --filter-modes=*) FILTER_MODES="${1#*=}"; shift ;;
+        --filter-top-p) FILTER_TOP_P="$2"; shift 2 ;;
+        --filter-top-p=*) FILTER_TOP_P="${1#*=}"; shift ;;
+        --nofilter-top-p) NOFILTER_TOP_P="$2"; shift 2 ;;
+        --nofilter-top-p=*) NOFILTER_TOP_P="${1#*=}"; shift ;;
         --gpus) IFS=',' read -r -a GPUS <<< "$2"; GPUS_PROVIDED=true; shift 2 ;;
         --gpus=*) IFS=',' read -r -a GPUS <<< "${1#*=}"; GPUS_PROVIDED=true; shift ;;
         --gpus-per-exp) GPUS_PER_EXP="$2"; shift 2 ;;
         --gpus-per-exp=*) GPUS_PER_EXP="${1#*=}"; shift ;;
         --ray-num-cpus) RAY_NUM_CPUS="$2"; shift 2 ;;
         --ray-num-cpus=*) RAY_NUM_CPUS="${1#*=}"; shift ;;
+        --cooldown) COOLDOWN_SECONDS="$2"; shift 2 ;;
+        --cooldown=*) COOLDOWN_SECONDS="${1#*=}"; shift ;;
         --gpu-memory-utilization) GPU_MEMORY_UTILIZATION="$2"; shift 2 ;;
         --gpu-memory-utilization=*) GPU_MEMORY_UTILIZATION="${1#*=}"; shift ;;
         --save-freq) SAVE_FREQ="$2"; shift 2 ;;
@@ -111,7 +113,6 @@ for ((i=0; i<${#GPUS[@]}; i+=GPUS_PER_EXP)); do
     done
     GPU_GROUPS+=("$group")
 done
-NUM_SLOTS=${#GPU_GROUPS[@]}
 
 short_gpu_name() {
     local name="$1"
@@ -124,7 +125,6 @@ short_gpu_name() {
     echo "${cleaned%% *}"
 }
 
-declare -A GPU_LABELS
 get_gpu_label() {
     local gpu_id="$1"
     if [ -n "${GPU_LABELS[$gpu_id]+x}" ]; then
@@ -144,35 +144,6 @@ get_gpu_label() {
     short=$(short_gpu_name "$name")
     GPU_LABELS[$gpu_id]="1x${short}"
     echo "${GPU_LABELS[$gpu_id]}"
-}
-
-get_gpu_model_label() {
-    local models=()
-    local id label model
-    for id in "${GPUS[@]}"; do
-        label=$(get_gpu_label "$id")
-        model="${label#1x}"
-        models+=("$model")
-    done
-    local unique_models=()
-    local m found
-    for m in "${models[@]}"; do
-        found=false
-        for u in "${unique_models[@]}"; do
-            if [ "$u" = "$m" ]; then
-                found=true
-                break
-            fi
-        done
-        if [ "$found" = false ]; then
-            unique_models+=("$m")
-        fi
-    done
-    if [ ${#unique_models[@]} -eq 1 ]; then
-        echo "${unique_models[0]}"
-    else
-        echo "mixed"
-    fi
 }
 
 get_gpu_label_for_list() {
@@ -198,52 +169,155 @@ get_gpu_label_for_list() {
     echo "${count}x${first_model}"
 }
 
-GPU_MODEL_LABEL=$(get_gpu_model_label)
-GPU_LOG_LABEL="${GPUS_PER_EXP}x${GPU_MODEL_LABEL}"
-LOG_FILE="logs/entropy_sweep_${MODEL_NAME}.log"
-RESULT_ROOT="logs/entropy_sweep_${MODEL_NAME}"
-CHECKPOINT_ROOT="model_saving/entropy_sweep_${MODEL_NAME}"
+normalize_slipper_rate() {
+    local raw="$1"
+    local val="${raw// /}"
+    val="${val%%%}"
+    python - "$val" <<'PY'
+import sys
+
+token = sys.argv[1].strip()
+if not token:
+    print("ERR:empty")
+    raise SystemExit(0)
+try:
+    x = float(token)
+except Exception:
+    print("ERR:not_numeric")
+    raise SystemExit(0)
+
+# <=1: already ratio; >1: treat as percentage
+if x > 1.0:
+    x = x / 100.0
+
+if x < 0.0 or x > 1.0:
+    print("ERR:out_of_range")
+    raise SystemExit(0)
+
+print(f"{x:.6f}")
+PY
+}
+
+parse_slipper_rates() {
+    IFS=',' read -r -a raw <<< "$SLIPPER_RATES"
+    SLIPPER_VALUES=()
+    for token in "${raw[@]}"; do
+        token="${token// /}"
+        if [ -z "$token" ]; then
+            continue
+        fi
+        local normalized
+        normalized=$(normalize_slipper_rate "$token")
+        if [[ "$normalized" == ERR:* ]]; then
+            echo "Error: invalid slipper rate '${token}' (${normalized#ERR:})" >&2
+            exit 1
+        fi
+        SLIPPER_VALUES+=("$normalized")
+    done
+    if [ ${#SLIPPER_VALUES[@]} -eq 0 ]; then
+        echo "Error: no valid slipper-rate entries provided" >&2
+        exit 1
+    fi
+}
+
+parse_filter_modes() {
+    IFS=',' read -r -a raw <<< "$FILTER_MODES"
+    MODES=()
+    for token in "${raw[@]}"; do
+        token="${token// /}"
+        token="${token,,}"
+        if [ -z "$token" ]; then
+            continue
+        fi
+        case "$token" in
+            filter|nofilter) MODES+=("$token") ;;
+            *)
+                echo "Error: invalid filter mode '${token}'. Use filter or nofilter." >&2
+                exit 1
+                ;;
+        esac
+    done
+    if [ ${#MODES[@]} -eq 0 ]; then
+        echo "Error: no valid filter modes provided" >&2
+        exit 1
+    fi
+}
+
+parse_slipper_rates
+parse_filter_modes
+
+format_rate_label() {
+    local raw="$1"
+    python - "$raw" <<'PY'
+import sys
+x = float(sys.argv[1])
+s = f"{x:.6f}".rstrip("0").rstrip(".")
+print(s.replace(".", "p"))
+PY
+}
+
+EXPERIMENTS=()
+for mode in "${MODES[@]}"; do
+    if [ "$mode" = "filter" ]; then
+        top_p="$FILTER_TOP_P"
+        include_zero="False"
+    else
+        top_p="$NOFILTER_TOP_P"
+        include_zero="True"
+    fi
+    for slipper_rate in "${SLIPPER_VALUES[@]}"; do
+        success_rate=$(python - "$slipper_rate" <<'PY'
+import sys
+s = float(sys.argv[1])
+print(f"{1.0 - s:.6f}")
+PY
+)
+        EXPERIMENTS+=("${mode}|${top_p}|${include_zero}|${slipper_rate}|${success_rate}")
+    done
+done
+
+if [ ${#EXPERIMENTS[@]} -eq 0 ]; then
+    echo "Error: no experiments generated" >&2
+    exit 1
+fi
+
+LOG_FILE="logs/frozenlake_slipper_rate_sweep_${MODEL_NAME}.log"
+RESULT_ROOT="logs/frozenlake_slipper_rate_sweep_${MODEL_NAME}"
+CHECKPOINT_ROOT="model_saving/frozenlake_slipper_rate_sweep_${MODEL_NAME}"
 
 mkdir -p logs
 mkdir -p "$RESULT_ROOT"
 mkdir -p "$CHECKPOINT_ROOT"
 
-echo "=== Entropy Sweep Runner (${MODEL_NAME}): $(date) ===" | tee "$LOG_FILE"
-echo "Values: ${ENTROPY_VALUES} | Steps: ${STEPS} | GPUs per exp: ${GPU_LOG_LABEL}" | tee -a "$LOG_FILE"
-echo "Groups: ${GPU_GROUPS[*]} | GPU memory util: ${GPU_MEMORY_UTILIZATION} | ray_num_cpus: ${RAY_NUM_CPUS} | save_freq: ${SAVE_FREQ}" | tee -a "$LOG_FILE"
-
-parse_values() {
-    IFS=',' read -r -a raw <<< "$1"
-    VALUES=()
-    for token in "${raw[@]}"; do
-        token="${token// /}"
-        if [ -n "$token" ]; then
-            VALUES+=("$token")
-        fi
-    done
-    if [ ${#VALUES[@]} -eq 0 ]; then
-        echo "Error: no entries provided for value list" >&2
-        exit 1
-    fi
-}
-
-parse_values "$ENTROPY_VALUES"
-EXPERIMENTS=("${VALUES[@]}")
+echo "=== FrozenLake slipper_rate sweep (${MODEL_NAME}): $(date) ===" | tee "$LOG_FILE"
+echo "Slipper rates: ${SLIPPER_RATES} | Modes: ${FILTER_MODES} | Steps: ${STEPS}" | tee -a "$LOG_FILE"
+echo "Filter top-p: ${FILTER_TOP_P} | NoFilter top-p: ${NOFILTER_TOP_P}" | tee -a "$LOG_FILE"
+echo "GPU groups: ${GPU_GROUPS[*]} | cooldown=${COOLDOWN_SECONDS}s | ray_num_cpus=${RAY_NUM_CPUS}" | tee -a "$LOG_FILE"
 
 run_experiment() {
-    local value="$1"
-    local gpu_list="$2"
-    local safe_label="${value//./}"
-    safe_label="${safe_label,,}"
-    local filter_tag="nofilter"
-    if [ "${ROLL_FILTER_INCLUDE_ZERO}" = "False" ]; then
-        filter_tag="filter_zero"
-    fi
+    local mode="$1"
+    local top_p="$2"
+    local include_zero="$3"
+    local slipper_rate="$4"
+    local success_rate="$5"
+    local gpu_list="$6"
 
-    local name="sokoban_entropy_sweep_${filter_tag}_${safe_label}-${MODEL_NAME}"
-    local task_dir="${RESULT_ROOT}/${filter_tag}/${safe_label}"
+    local slip_pct
+    slip_pct=$(python - "$slipper_rate" <<'PY'
+import sys
+s = float(sys.argv[1])
+print(f"{s * 100:.1f}")
+PY
+)
+    local slip_label
+    slip_label=$(format_rate_label "$slipper_rate")
+    local safe_label="slip${slip_label}"
+    safe_label="${safe_label,,}"
+
+    local name="frozenlake_${mode}_${safe_label}-${MODEL_NAME}"
+    local task_dir="${RESULT_ROOT}/${mode}/${safe_label}"
     local log_path="${task_dir}/${name}.log"
-    local checkpoint_dir="${CHECKPOINT_ROOT}/${safe_label}/${name}"
+    local checkpoint_dir="${CHECKPOINT_ROOT}/${mode}/${safe_label}/${name}"
     local gpus_per_exp
     IFS=',' read -r -a gpu_ids <<< "$gpu_list"
     gpus_per_exp=${#gpu_ids[@]}
@@ -265,9 +339,11 @@ run_experiment() {
         ray_kwargs.ray_init.num_cpus="${RAY_NUM_CPUS}" \
         system.CUDA_VISIBLE_DEVICES="'${gpu_list}'" \
         algorithm.adv_estimator=gae \
+        actor_rollout_ref.actor.loss_agg_mode=token-mean \
         actor_rollout_ref.actor.use_kl_loss=False \
+        actor_rollout_ref.actor.kl_loss_type=low-var-kl \
         actor_rollout_ref.actor.kl_loss_coef=0 \
-        actor_rollout_ref.actor.entropy_coeff="${value}" \
+        actor_rollout_ref.actor.entropy_coeff=0 \
         actor_rollout_ref.actor.entropy_from_logits_with_chunking=True \
         actor_rollout_ref.actor.filter_loss_scaling=none \
         actor_rollout_ref.actor.ppo_mini_batch_size=32 \
@@ -277,21 +353,15 @@ run_experiment() {
         critic.ppo_micro_batch_size_per_gpu=4 \
         ppo_mini_batch_size=32 \
         actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=8 \
-        actor_rollout_ref.rollout.rollout_filter_strategy=top_p \
-        actor_rollout_ref.rollout.rollout_filter_value=1 \
-        actor_rollout_ref.rollout.rollout_filter_include_zero=${ROLL_FILTER_INCLUDE_ZERO} \
-        actor_rollout_ref.rollout.rollout_filter_type=largest \
         actor_rollout_ref.rollout.gpu_memory_utilization="${GPU_MEMORY_UTILIZATION}" \
-        actor_rollout_ref.rollout.rollout_filter_metric=reward_variance \
-        es_manager.train.env_groups=8 \
-        es_manager.train.group_size=16 \
-        es_manager.train.env_configs.n_groups='[8]' \
-        es_manager.val.env_groups=512 \
-        es_manager.val.group_size=1 \
-        es_manager.val.env_configs.n_groups='[512]' \
+        actor_rollout_ref.rollout.rollout_filter_strategy=top_p \
+        actor_rollout_ref.rollout.rollout_filter_value="${top_p}" \
+        actor_rollout_ref.rollout.rollout_filter_include_zero="${include_zero}" \
+        custom_envs.CoordFrozenLake.env_config.success_rate="${success_rate}" \
+        actor_rollout_ref.actor.checkpoint.save_contents=[model] \
+        critic.checkpoint.save_contents=[model] \
         2>&1 | tee "$log_path"
     EXIT_CODE=${PIPESTATUS[0]}
-
     END=$(date +%s)
     TOTAL_TIME=$((END - START))
 
@@ -312,9 +382,9 @@ except Exception:
     text = ""
 
 patterns = [
-    r"timing_s/train_total[:\s]+([\d.]+)",
-    r"timing_s/eval_total[:\s]+([\d.]+)",
-    r"timing_s/total[:\s]+([\d.]+)",
+    r"timing_s/train_total[:\\s]+([\\d.]+)",
+    r"timing_s/eval_total[:\\s]+([\\d.]+)",
+    r"timing_s/total[:\\s]+([\\d.]+)",
 ]
 
 for pattern in patterns:
@@ -338,7 +408,7 @@ PY
 
     local gpu_label
     gpu_label=$(get_gpu_label_for_list "$gpu_list")
-    local summary_line="entropy=${value} | filter=${filter_tag} | include_zero=${ROLL_FILTER_INCLUDE_ZERO} | train_time=${TRAIN_TIME}s | eval_time=${EVAL_TIME}s | total_time=${TOTAL_TIME_METRIC}s | wall_time=${TOTAL_TIME}s | gpu=${gpu_label} | status=${status}"
+    local summary_line="mode=${mode} | slipper_rate=${slipper_rate} (${slip_pct}%) | success_rate=${success_rate} | top_p=${top_p} | include_zero=${include_zero} | train_time=${TRAIN_TIME}s | eval_time=${EVAL_TIME}s | total_time=${TOTAL_TIME_METRIC}s | wall_time=${TOTAL_TIME}s | gpu=${gpu_label} | status=${status}"
     echo "${summary_line}" > "${task_dir}/${name}.result"
     echo "${summary_line}" | tee -a "$LOG_FILE"
     if [ "$status" = "fail" ]; then
@@ -346,13 +416,7 @@ PY
     fi
 }
 
-EXPERIMENT_COUNT=${#EXPERIMENTS[@]}
-if [ $EXPERIMENT_COUNT -eq 0 ]; then
-    echo "No experiments to run" >&2
-    exit 1
-fi
-
-QUEUE_FILE=$(mktemp -t ragen_entropy_queue.XXXXXX)
+QUEUE_FILE=$(mktemp -t ragen_frozenlake_slipper_queue.XXXXXX)
 echo 0 > "$QUEUE_FILE"
 QUEUE_LOCK="${QUEUE_FILE}.lock"
 QUEUE_LOCK_DIR="${QUEUE_LOCK}.d"
@@ -419,8 +483,8 @@ run_queue_for_slot() {
         if [ "$idx" -lt 0 ]; then
             break
         fi
-        local value="${EXPERIMENTS[$idx]}"
-        run_experiment "$value" "$gpu_list" || true
+        IFS='|' read -r mode top_p include_zero slipper_rate success_rate <<< "${EXPERIMENTS[$idx]}"
+        run_experiment "$mode" "$top_p" "$include_zero" "$slipper_rate" "$success_rate" "$gpu_list" || true
         if [ "$COOLDOWN_SECONDS" -gt 0 ]; then
             sleep "$COOLDOWN_SECONDS"
         fi
@@ -442,21 +506,19 @@ done
 
 {
     echo ""
-    echo "=== Entropy Sweep Summary ==="
-    echo "Project: ${PROJECT_NAME} | Steps: ${STEPS} | GPU per exp: ${GPU_LOG_LABEL}"
-    for value in "${EXPERIMENTS[@]}"; do
-        safe_label="${value//./}"
+    echo "=== FrozenLake slipper_rate Sweep Summary ==="
+    echo "Project: ${PROJECT_NAME} | Steps: ${STEPS} | Modes: ${FILTER_MODES}"
+    for exp in "${EXPERIMENTS[@]}"; do
+        IFS='|' read -r mode top_p include_zero slipper_rate success_rate <<< "$exp"
+        slip_label=$(format_rate_label "$slipper_rate")
+        safe_label="slip${slip_label}"
         safe_label="${safe_label,,}"
-        filter_tag="nofilter"
-        if [ "${ROLL_FILTER_INCLUDE_ZERO}" = "False" ]; then
-            filter_tag="filter_zero"
-        fi
-        name="sokoban_entropy_sweep_${filter_tag}_${safe_label}-${MODEL_NAME}"
-        task_dir="${RESULT_ROOT}/${filter_tag}/${safe_label}"
+        name="frozenlake_${mode}_${safe_label}-${MODEL_NAME}"
+        task_dir="${RESULT_ROOT}/${mode}/${safe_label}"
         if [ -f "${task_dir}/${name}.result" ]; then
             cat "${task_dir}/${name}.result"
         else
-            echo "entropy=${value} | status=missing"
+            echo "mode=${mode} | slipper_rate=${slipper_rate} | top_p=${top_p} | status=missing"
         fi
     done
 } | tee -a "$LOG_FILE"

@@ -12,8 +12,8 @@ set -euo pipefail
 STEPS=400
 TASK="webshop"
 CONFIG="_6_webshop"
-SAVE_FREQ=-1
-FIRST_ONLY=false
+SAVE_FREQ=200
+COMBOS_SELECTION=""
 FILTER_MODES=("filter" "nofilter")
 FILTERS_OPTION="all"
 SELECTED_FILTERS=("${FILTER_MODES[@]}")
@@ -36,7 +36,7 @@ usage() {
     echo "  --gpu-memory-utilization V  Rollout gpu_memory_utilization (default: 0.3)"
     echo "  --save-freq N         Checkpoint save frequency (default: -1 to disable saving)"
     echo "  --filters LIST        Comma-separated filter modes (filter,nofilter,all). Default: all"
-    echo "  --first-only          Run only the first combo (Qwen2.5-3B-Instruct + PPO)"
+    echo "  --combos LIST         Comma-separated 1-based combo indices to run (e.g., 2,3,4). Default: all"
     echo "  -h, --help            Show this help"
     exit 0
 }
@@ -57,7 +57,8 @@ while [ $# -gt 0 ]; do
         --save-freq=*) SAVE_FREQ="${1#*=}"; shift ;;
         --filters) FILTERS_OPTION="$2"; shift 2 ;;
         --filters=*) FILTERS_OPTION="${1#*=}"; shift ;;
-        --first-only) FIRST_ONLY=true; shift ;;
+        --combos) COMBOS_SELECTION="$2"; shift 2 ;;
+        --combos=*) COMBOS_SELECTION="${1#*=}"; shift ;;
         -h|--help) usage ;;
         *) echo "Unknown argument: $1"; usage ;;
     esac
@@ -295,6 +296,7 @@ run_experiment() {
         system.CUDA_VISIBLE_DEVICES="'${gpu_list}'" \
         actor_rollout_ref.rollout.rollout_filter_strategy="${filter_strategy}" \
         actor_rollout_ref.rollout.rollout_filter_value="${filter_value}" \
+        ppo_mini_batch_size=16 \
         es_manager.train.env_groups=4 \
         es_manager.train.group_size=8 \
         es_manager.train.env_configs.n_groups="[4]" \
@@ -416,8 +418,18 @@ ALL_COMBOS=(
     "Llama-3.2-3B-Instruct|PPO"
 )
 
-if [ "$FIRST_ONLY" = true ]; then
-    COMBOS=("${ALL_COMBOS[0]}")
+if [ -n "$COMBOS_SELECTION" ]; then
+    COMBOS=()
+    IFS=',' read -r -a combo_indices <<< "$COMBOS_SELECTION"
+    for ci in "${combo_indices[@]}"; do
+        idx=$((ci - 1))
+        if [ "$idx" -ge 0 ] && [ "$idx" -lt ${#ALL_COMBOS[@]} ]; then
+            COMBOS+=("${ALL_COMBOS[$idx]}")
+        else
+            echo "Invalid combo index: $ci (valid: 1-${#ALL_COMBOS[@]})" >&2
+            exit 1
+        fi
+    done
 else
     COMBOS=("${ALL_COMBOS[@]}")
 fi

@@ -49,3 +49,11 @@ try:
     REGISTERED_ENV_CONFIGS['webshop'] = WebShopEnvConfig
 except ImportError:
     pass
+
+try:
+    from .search.env import SearchEnv
+    from .search.config import SearchEnvConfig
+    REGISTERED_ENVS['search'] = SearchEnv
+    REGISTERED_ENV_CONFIGS['search'] = SearchEnvConfig
+except ImportError:
+    pass

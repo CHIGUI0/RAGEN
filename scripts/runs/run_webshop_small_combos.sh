@@ -13,6 +13,8 @@ STEPS=400
 TASK="webshop"
 CONFIG="_6_webshop"
 SAVE_FREQ=200
+NUM_GROUPS=8
+GROUP_SIZE=16
 COMBOS_SELECTION=""
 FILTER_MODES=("filter" "nofilter")
 FILTERS_OPTION="all"
@@ -270,7 +272,7 @@ run_experiment() {
     algo_overrides=$(get_algo_overrides "$algo")
     read -r -a algo_args <<< "$algo_overrides"
 
-    local name="${task}-${algo}-${filter}-${model_name}"
+    local name="${task}-${algo}-${filter}-${model_name}-${NUM_GROUPS}x${GROUP_SIZE}"
     local task_dir="${RESULT_ROOT}/webshop_small_combos"
     local log_path="${task_dir}/${name}.log"
     local checkpoint_dir="${CHECKPOINT_ROOT}/${model_name}/${algo}/${filter}/${name}"
@@ -297,9 +299,9 @@ run_experiment() {
         actor_rollout_ref.rollout.rollout_filter_strategy="${filter_strategy}" \
         actor_rollout_ref.rollout.rollout_filter_value="${filter_value}" \
         ppo_mini_batch_size=16 \
-        es_manager.train.env_groups=4 \
-        es_manager.train.group_size=8 \
-        es_manager.train.env_configs.n_groups="[4]" \
+        es_manager.train.env_groups=${NUM_GROUPS} \
+        es_manager.train.group_size=${GROUP_SIZE} \
+        es_manager.train.env_configs.n_groups="[${NUM_GROUPS}]" \
         es_manager.val.env_groups=128 \
         es_manager.val.group_size=1 \
         es_manager.val.env_configs.n_groups="[128]" \

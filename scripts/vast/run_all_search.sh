@@ -103,6 +103,8 @@ bash scripts/runs/run_search_benchmark.sh \
     --gpus 0,1,2,3 \
     --gpus-per-exp 1 \
     --retrieval-port "$RETRIEVAL_PORT" \
+    --micro-batch 2 \
+    --gpu-memory-utilization 0.4 \
     2>&1 | tee logs/search_benchmark/phase1a_qwen3b.log &
 PID_PHASE1A=$!
 
@@ -114,6 +116,8 @@ bash scripts/runs/run_search_benchmark.sh \
     --gpus 4,5 \
     --gpus-per-exp 1 \
     --retrieval-port "$RETRIEVAL_PORT" \
+    --micro-batch 2 \
+    --gpu-memory-utilization 0.4 \
     2>&1 | tee logs/search_benchmark/phase1b_llama3b.log &
 PID_PHASE1B=$!
 
@@ -140,6 +144,8 @@ bash scripts/runs/run_search_benchmark.sh \
     --gpus 0,1,2,3 \
     --gpus-per-exp 2 \
     --retrieval-port "$RETRIEVAL_PORT" \
+    --micro-batch 2 \
+    --gpu-memory-utilization 0.4 \
     2>&1 | tee logs/search_benchmark/phase2_qwen7b.log
 PHASE2_EXIT=$?
 

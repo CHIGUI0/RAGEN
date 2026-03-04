@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+# Use user-writable datasets cache to avoid permission conflicts with root-owned lock files
+export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${HOME}/.hf_cache/datasets}"
+
 # Defaults
 STEPS=400
 MODEL_NAMES=("Qwen2.5-3B-Instruct")
@@ -314,9 +317,13 @@ run_experiment() {
     IFS=',' read -r -a gpu_ids <<< "$gpu_list"
     gpus_per_exp=${#gpu_ids[@]}
 
+    # Limit Ray CPU workers to avoid spawning hundreds of idle workers (default: 8 per GPU)
+    local ray_num_cpus=$((gpus_per_exp * 8))
+    common_overrides+=("ray_kwargs.ray_init.num_cpus=${ray_num_cpus}")
+
     mkdir -p "${checkpoint_dir}"
     START=$(date +%s)
-    CUDA_VISIBLE_DEVICES="${gpu_list}" python train.py --config-name "$CONFIG" \
+    CUDA_VISIBLE_DEVICES="${gpu_list}" /venv/ragen/bin/python train.py --config-name "$CONFIG" \
         model_path="${model_path}" \
         trainer.project_name="ragen_search_benchmark" \
         trainer.total_training_steps="${STEPS}" \

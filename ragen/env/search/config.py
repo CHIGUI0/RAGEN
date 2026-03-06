@@ -20,7 +20,7 @@ class SearchEnvConfig:
     # --- Retrieval server ---
     retrieval_server_url: str = "http://127.0.0.1:8000"
     retrieval_timeout: float = 30.0
-    max_search_results: int = 10
+    max_search_results: int = 5
     max_total_chars: int = 4000  # total char limit for all docs combined (~1k tokens)
 
     # --- Environment ---

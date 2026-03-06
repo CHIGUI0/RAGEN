@@ -127,8 +127,8 @@ class RetrievalClient:
             score = result.get("score", 0.0)
 
             # Truncate content to 300 chars (same as rllm)
-            if len(content) > 300:
-                content = content[:300] + "..."
+            if len(content) > 800:
+                content = content[:800] + "..."
 
             formatted.append(f"[Document {i}] (ID: {doc_id}, Score: {score:.3f})\n{content}")
 

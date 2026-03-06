@@ -313,7 +313,7 @@ custom_envs:
     max_workers: 32
     env_config:
       max_steps: 10
-      max_search_results: 10
+      max_search_results: 5
 
   SearchQAMock:
     env_type: search
@@ -333,5 +333,5 @@ custom_envs:
     max_workers: 32
     env_config:
       max_steps: 10
-      max_search_results: 10
+      max_search_results: 5
       mock_mode: true

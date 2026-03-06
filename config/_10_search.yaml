@@ -26,10 +26,11 @@ actor_rollout_ref:
 
 es_manager:
   train:
-    env_groups: 4
+    env_groups: 16
+    group_size: 8
     env_configs:
       tags: ["SearchQA"]
-      n_groups: [4]
+      n_groups: [16]
   val:
     env_groups: 256
     env_configs:

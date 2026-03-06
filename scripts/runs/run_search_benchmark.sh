@@ -10,7 +10,7 @@ set -euo pipefail
 export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${HOME}/.hf_cache/datasets}"
 
 # Defaults
-STEPS=400
+STEPS=200
 MODEL_NAMES=("Qwen2.5-3B-Instruct")
 ALGORITHMS=("PPO")
 SAVE_FREQ=-1
@@ -323,14 +323,14 @@ run_experiment() {
 
     mkdir -p "${checkpoint_dir}"
     START=$(date +%s)
-    CUDA_VISIBLE_DEVICES="${gpu_list}" /venv/ragen/bin/python train.py --config-name "$CONFIG" \
+    CUDA_VISIBLE_DEVICES="${gpu_list}" /venv/main/bin/python train.py --config-name "$CONFIG" \
         model_path="${model_path}" \
         trainer.project_name="ragen_search_benchmark" \
         trainer.total_training_steps="${STEPS}" \
         trainer.experiment_name="${name}" \
         trainer.save_freq="${SAVE_FREQ}" \
         trainer.default_local_dir="${checkpoint_dir}" \
-        trainer.logger="['console','wandb']" \
+        trainer.logger="['console']" \
         trainer.val_before_train=True \
         trainer.n_gpus_per_node="${gpus_per_exp}" \
         system.CUDA_VISIBLE_DEVICES="'${gpu_list}'" \

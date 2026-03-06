@@ -9,6 +9,6 @@ bash scripts/runs/run_search_benchmark.sh \
     --gpus 0 \
     --gpus-per-exp 1 \
     --micro-batch 2 \
-    --gpu-memory-utilization 0.35 \
+    --gpu-memory-utilization 0.4 \
     --collapse-freq 999 \
     --retrieval-port 8000

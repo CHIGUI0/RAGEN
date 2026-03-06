@@ -6,6 +6,10 @@
 
 set -euo pipefail
 
+# Activate ragen conda environment
+eval "$(conda shell.bash hook 2>/dev/null || true)"
+conda activate ragen 2>/dev/null || true
+
 # Use user-writable datasets cache to avoid permission conflicts with root-owned lock files
 export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${HOME}/.hf_cache/datasets}"
 
@@ -323,14 +327,14 @@ run_experiment() {
 
     mkdir -p "${checkpoint_dir}"
     START=$(date +%s)
-    CUDA_VISIBLE_DEVICES="${gpu_list}" /venv/main/bin/python train.py --config-name "$CONFIG" \
+    CUDA_VISIBLE_DEVICES="${gpu_list}" python train.py --config-name "$CONFIG" \
         model_path="${model_path}" \
         trainer.project_name="ragen_search_benchmark" \
         trainer.total_training_steps="${STEPS}" \
         trainer.experiment_name="${name}" \
         trainer.save_freq="${SAVE_FREQ}" \
         trainer.default_local_dir="${checkpoint_dir}" \
-        trainer.logger="['console']" \
+        trainer.logger="['console','wandb']" \
         trainer.val_before_train=True \
         trainer.n_gpus_per_node="${gpus_per_exp}" \
         system.CUDA_VISIBLE_DEVICES="'${gpu_list}'" \

@@ -99,7 +99,7 @@ pip install transformers==4.48.2
 
 # ---------- Retrieval server deps ----------
 print_step "Installing retrieval server dependencies..."
-pip install flask sentence-transformers faiss-cpu==1.11.0
+pip install flask sentence-transformers faiss-cpu==1.11.0 wandb
 
 # ---------- vLLM (already in requirements.txt, ensure correct version) ----------
 print_step "Verifying vllm installation..."

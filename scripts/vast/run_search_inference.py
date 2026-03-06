@@ -98,7 +98,17 @@ def run_episode(question, ground_truth, llm, tokenizer, sampling_params, args):
     action_types = []
     for turn in range(1, args.max_turns + 1):
         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        outputs = llm.generate([prompt], sampling_params)
+        # Skip if prompt is too long for the model
+        prompt_tokens = len(tokenizer.encode(prompt))
+        if prompt_tokens > 4500:  # leave room for generation
+            action_types.append("truncated")
+            return 0.0, turn, action_types, ""
+        try:
+            outputs = llm.generate([prompt], sampling_params)
+        except ValueError:
+            # Prompt too long for max_model_len
+            action_types.append("truncated")
+            return 0.0, turn, action_types, ""
         response = outputs[0].outputs[0].text
 
         action = extract_action(response)

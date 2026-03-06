@@ -1,0 +1,3226 @@
+{
+  "config": {
+    "model": "Qwen/Qwen2.5-3B-Instruct",
+    "n_prompts": 30,
+    "rollouts_per_prompt": 8,
+    "temperature": 0.7,
+    "max_turns": 5,
+    "data_path": "data/search/val.parquet",
+    "seed": 42
+  },
+  "summary": {
+    "mean_reward": 0.2503567908269921,
+    "mean_rv": 0.06879993749370666,
+    "n_all_correct": 0,
+    "n_all_wrong": 13,
+    "n_mixed": 17,
+    "elapsed_seconds": 2634.749886751175
+  },
+  "prompts": [
+    {
+      "prompt_idx": 4367,
+      "question": "VIVA Media AG changed it's name in 2004. What does their new acronym stand for?",
+      "ground_truth": "Gesellschaft mit beschränkter Haftung",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The new acronym stands for Voor Individuele Vrijheid en Arbeid in een Nieuwe Toekomst."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Unable to find the new name or acronym after the name change from VIVA Media AG in 2004. The search results do not contain the required information."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Viacom VIMN"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "\"VIVA\" does not have a specific meaning as an acronym, it was a name change from \"VIVA Media AG\" to \"VIVA Media GmbH\" in 1993 and it remained the same after the 2004 name change to VIVA Media AG"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "VIVA Media AG did not have a specific new acronym after being acquired by Viacom in 2004. The search results did not provide this information directly."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "VIMN"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "VIVA stands for Voor Individuele Vrijheid en Arbeid in een Nieuwe Toekomst in Dutch, which translates to \"For Individual Freedom and Labour in a New Future.\" This is the meaning behind the new acronym after the company's name change in 2004. However, the VIVA Media AG, now known as Viva, was a German-language music television network that was acquired by Viacom International in 2004."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "After VIVA Media AG changed its name to Viacom International Media Networks GmbH in 2004, it did not use a new acronym. The company's name remained VIVA Media AG until 2004, and after that, it is associated with Viacom International."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 1867,
+      "question": "Which of Jonny Craig and Pete Doherty has been a member of more bands ?",
+      "ground_truth": "Jonny\" Craig",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Pete Doherty has been a member of fewer bands."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Pete Doherty has been in more bands than Jonny Craig as he is part of The Libertines and Babyshambles, while Jonny Craig is only mentioned as a member of westerHALTS, Ghost Runner on Third, and Slaves."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "search"
+          ],
+          "answer": ""
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Jonny Craig has been in more bands than Pete Doherty. Jonny has been in westerHALTS, Ghost Runner on Third, and Slaves, totaling 3 bands, while Pete has been in the Libertines, Babyshambles, and Peter Doherty and the Puta Madres, totaling 3 bands."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Pete Doherty has been a member of one band (Babyshambles) while Jonny Craig has been a member of multiple bands (westerHALTS, Ghost Runner on Third, Slaves). Therefore, Jonny Craig has been a member of more bands."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Pete Doherty has been a member of fewer bands than Carl Barât"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "search"
+          ],
+          "answer": ""
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Pete Doherty has been a member of The Libertines and Babyshambles. Based on the information available, Jonny Craig has been a member of several bands including westerHALTS, Ghost Runner on Third, and Slaves. Comparing the available information, Pete Doherty appears to have been in more bands than Jonny Craig, though the exact number cannot be fully determined with the given details."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 3504,
+      "question": "Where was the first governor after the The Missouri Compromise from?",
+      "ground_truth": "Bath, Maine",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Alexander McNair"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Alexander McNair was born in Lancaster, Pennsylvania and grew up in Mifflin County. Therefore, the first governor after the Missouri Compromise, Alexander McNair, was from Lancaster, Pennsylvania."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Alexander McNair"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Alexander McNair"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Herculaneum, Missouri"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Alexander McNair"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Silas Woodson"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Alexander McNair"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 5015,
+      "question": "The creator of \"Wallace and Gromit\" also created what animation comedy that matched animated zoo animals with a soundtrack of people talking about their homes? ",
+      "ground_truth": "Creature Comforts",
+      "rewards": [
+        1.0,
+        0.4,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "reward_mean": 0.8,
+      "reward_variance": 0.13,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Creature Comforts"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.4,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The animation comedy that matches the description is \"Creature Comforts\"."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Creature Comforts"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Nick Park's animation comedy \"Creature Comforts\" that matched animated zoo animals with a soundtrack of people talking about their homes."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Creature Comforts"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Creature Comforts"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Creature Comforts"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Creature Comforts"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 554,
+      "question": "Woman's Era and Naj are what kind of magazines?",
+      "ground_truth": "fortnightly women interest magazine",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.30769230769230765,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.03846153846153846,
+      "reward_variance": 0.010355029585798816,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The Woman's Era was an African-American women's newspaper, while Naj is a Polish-language fortnightly lifestyle and women's magazine."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The magazines Woman's Era and Naj are both magazines. Woman's Era is an African-American women's magazine, while Naj is a Polish language fortnightly lifestyle and women's magazine published in Warsaw, Poland."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Woman's Era is a magazine, specifically a newspaper for African-American women, while Naj is a Polish language fortnightly lifestyle and women's magazine."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Woman's Era was a national newspaper published by and for African-American women. Its type is not explicitly stated in the available information."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Naj is a Polish language fortnightly lifestyle and women's magazine. Woman's Era, if it existed, was likely a publication for African-American women."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.30769230769230765,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Naj is a Polish language fortnightly lifestyle and women's magazine."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "\"Woman's Era\" and \"Naj\" are both magazines focusing on lifestyle and women's topics. \"Naj\" is a Polish magazine, while \"Woman's Era\" was an African-American women's magazine."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Both Woman's Era and Naj are women's magazines. Woman's Era was an African-American women's newspaper published in the United States, while Naj is a Polish women's magazine focusing on lifestyle, fashion, and beauty. Both publications cater to female readership but have distinct origins and focuses. "
+        }
+      ]
+    },
+    {
+      "prompt_idx": 6979,
+      "question": "The Rome Protocols were signed by three Prime Ministers one of which was assassinated as part of what?",
+      "ground_truth": "a failed coup attempt",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Rome Protocols were signed by three Prime Ministers: Benito Mussolini, Engelbert Dollfuss, and Gyula Gömbös. One of the Prime Ministers, Aldo Moro, was assassinated as part of a political kidnapping and killing by the Red Brigades in 1978."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Rome Protocols assassination Prime Minister was related to the kidnapping and killing of Prime Minister Aldo Moro in the 1970s"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Engelbert Dollfuss"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Aldo Moro assassination was part of the kidnapping and killing of Aldo Moro, which was carried out by the Red Brigades, a leftist Italian militant group. The assassination was part of a larger political conflict, and the assassin was Mario Moretti."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The Rome Protocols were signed by Mussolini, Dollfuss, and Gömbös as part of the International Conference of Rome for the Social Defense Against Anarchists, which was held in response to the assassination of Empress Elisabeth of Austria in 1898. There is no mention of any Prime Minister of Italy being assassinated as part of these protocols."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The assassination of Pope John Paul II by Mehmet Ali Ağca was not part of the Rome Protocols. The Rome Protocols were signed in 1934, while the assassination took place in 1981."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Rome Protocols were signed by three Prime Ministers, one of which, Engelbert Dollfuss, was assassinated before the Rome Protocols were signed. The assassination of Dollfuss was part of an earlier event, namely his assassination by anti-fascist activists in November 1933, which occurred before the Rome Protocols were signed in March 1934."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Dollfuss was assassinated as part of the conflict against Nazi regime's expansion into Austria."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 2197,
+      "question": "Jaclyn Stapp is married to the former frontman of a band that disbanded in what year?",
+      "ground_truth": "2004",
+      "rewards": [
+        1.0,
+        0.33333333333333337,
+        1.0,
+        0.4,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "reward_mean": 0.8416666666666667,
+      "reward_variance": 0.0754861111111111,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "2004"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.33333333333333337,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The band Creed disbanded in 2004."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "2004"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The band disbanded in 2004"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "2004"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "2004"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "2004"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "2004"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 2942,
+      "question": " If You Ever Get Lonely was covered by what Lyric Street Records-affiliated band?",
+      "ground_truth": "Love and Theft",
+      "rewards": [
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        0.3157894736842105,
+        1.0,
+        0.0
+      ],
+      "reward_mean": 0.6644736842105263,
+      "reward_variance": 0.1959400969529086,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Love and Theft"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Curb Records"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 1.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Love and Theft"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 1.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Love and Theft"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Love and Theft"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.3157894736842105,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Love and Theft is not affiliated with Lyric Street Records based on the available search result information."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Love and Theft"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The Motels"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 6378,
+      "question": "When was the  Argentine former footballer which  Dutch manager Ronald Koeman replaced in  2014–15 Southampton F.C. season born",
+      "ground_truth": "2 March 1972",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.5
+      ],
+      "reward_mean": 0.0625,
+      "reward_variance": 0.02734375,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Nigel Adkins"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "search"
+          ],
+          "answer": ""
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "search"
+          ],
+          "answer": ""
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Unable to determine the birth date of Marc-Édouard Neuez based on the provided information."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Diego Costa was born on 7 October 1988, making him the Argentine footballer replaced by Ronald Koeman at Southampton F.C. in the 2014-15 season."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "search"
+          ],
+          "answer": ""
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "search"
+          ],
+          "answer": ""
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.5,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1972"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 263,
+      "question": "Which character does this protagonist, who secretly loves and marries a member of the rival house, of William Shakespeare's tragedy that has a fictional character Benvolio slay?",
+      "ground_truth": "Tybalt",
+      "rewards": [
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.125,
+      "reward_variance": 0.109375,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Romeo"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Romeo"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Tybalt"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Juliet"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Juliet"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Romeo"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Romeo secretly loves Juliet"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Romeo secretly marries Juliet."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 5283,
+      "question": "Stronger Together was used for the campaign comprised of the Vice Presidential candidate who was a Senator from what state?",
+      "ground_truth": "Virginia",
+      "rewards": [
+        1.0,
+        0.4,
+        1.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "reward_mean": 0.8,
+      "reward_variance": 0.13,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Virginia"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Tim Kaine from Virginia"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Virginia"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Virginia"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Delaware"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Virginia"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Virginia"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Virginia"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 6994,
+      "question": "Are Darren Benjamin Shepherd and Rémi Lange both American?",
+      "ground_truth": "no",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Neither Darren Benjamin Shepherd nor Rémi Lange are both American. Darren Benjamin Shepherd is American, while Rémi Lange is French."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Rémi Lange is from Australia, which means he is not American. Darren Benjamin Shepherd is not mentioned in the results, but based on the format, he is assumed to be the second individual. Given the information, Darren Benjamin Shepherd is also not necessarily American based on the query format."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Darren Benjamin Shepherd is American while Rémi Lange is French."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Neither Darren Benjamin Shepherd nor Rémi Lange are American. Darren Benjamin Shepherd might not be a real person or his nationality needs to be checked, whereas Rémi Lange is French."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Darren Benjamin Shepherd is not American, but Rémi Lange is French."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Neither Darren Benjamin Shepherd nor Rémi Lange are American."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "No, Darren Benjamin Shepherd and Rémi Lange are not both American. Rémi Lange is French, while there is no indication that Darren Benjamin Shepherd is American."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "No, Rémi Lange is not American. He is a French film director."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 5777,
+      "question": "The head of the Foreign Relations Department of the Rastriya Janashakti Party holds a degree that can be abbreviated MS, M.S., or ScM, in what field?",
+      "ground_truth": "Engineering",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Science"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "International relations"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Science"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The head of the Foreign Relations Department of the Rastriya Janashakti Party likely holds an MS, M.S., or ScM degree in a field relevant to foreign policy or diplomacy, such as international relations, political science, or international law."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Not found based on the provided information"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Based on the available information, there is no specific mention of Seshadri Chari holding a degree abbreviated as MS, M.S., or ScM in the field of foreign relations for the Rastriya Janashakti Party. More specific data or a different search approach may be required to find this information."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Master of Science in Foreign Affairs is related to foreign policy and international development."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Political Management or related field"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 7323,
+      "question": "Lollipop Chainsaw featured Juliet Starling, who was voiced by a Canadian-American actress who has done voice roles for what Teen Titans spinoff series?",
+      "ground_truth": "Teen Titans Go!",
+      "rewards": [
+        0.0,
+        0.35294117647058826,
+        0.42857142857142855,
+        0.0,
+        0.4,
+        0.33333333333333337,
+        0.35294117647058826,
+        0.0
+      ],
+      "reward_mean": 0.2334733893557423,
+      "reward_variance": 0.03348011753721096,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "There is no mentioned Teen Titans spin-off series where Tara Strong voiced Juliet Starling in Lollipop Chainsaw."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.35294117647058826,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Tara Strong has voiced Raven in the Teen Titans and Teen Titans Go! spin-off series."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.42857142857142855,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Tara Strong voiced Juliet Starling in the Teen Titans Go! spinoff series."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Tara Strong"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Tara Strong did voice roles for Teen Titans and Teen Titans Go!"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.33333333333333337,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Tara Strong did voice work for the Teen Titans series and its spin-off, Teen Titans Go!"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.35294117647058826,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Tara Strong has done voice roles for Teen Titans Go!, a spin-off of Teen Titans."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "No specific Teen Titans spinoff series is mentioned where Hynden Walch voiced Starfire based on the available information. Starfire's voice role in Teen Titans was in the main series, not a spinoff."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 6266,
+      "question": "What team was led to victory in 1939 by a two-time All-American basketball player nicknamed \"Scat\"?",
+      "ground_truth": "Oklahoma Sooners",
+      "rewards": [
+        0.0,
+        1.0,
+        0.33333333333333337,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.2916666666666667,
+      "reward_variance": 0.17881944444444445,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The team led to victory in 1939 by a two-time All-American basketball player nicknamed \"Scat\" was the Oklahoma Sooners."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Oklahoma Sooners"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.33333333333333337,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The team that led to victory in 1939 was the Oklahoma Sooners."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The Oklahoma Sooners"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The team that led to victory in 1939 by a two-time All-American basketball player nicknamed \"Scat\" was the Oklahoma Sooners."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Jimmy McNatt"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "No team is found that led to victory in 1939 by a two-time All-American basketball player nicknamed \"Scat\". Further research is needed to confirm this information."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Jimmy McNatt"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 7168,
+      "question": "This expansion of the 2008 magazine article \"Is Google Making Us Stoopid?\" was a finalist for what award?",
+      "ground_truth": "Pulitzer Prize",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The article \"Is Google Making Us Stoopid?\" was published as a cover story in the July/August 2008 edition of The Atlantic magazine, but no specific information regarding it being a finalist for any award was found in the provided results."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The expansion of the 2008 magazine article \"Is Google Making Us Stoopid?\" was a finalist for the gold prize of the best issue of a technology magazine in 2008."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Based on the available information, there is no specific mention of the expansion of the 2008 magazine article \"Is Google Making Us Stoopid?\" being a finalist for any award. The article was a six-page cover story in the July/August 2008 edition of \"The Atlantic\" magazine and was critical of the Internet's effect on cognition."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "search"
+          ],
+          "answer": ""
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The original article \"Is Google Making Us Stoopid?\" won the gold prize for Best Online News Coverage in the Magazine Publishers of America (MPA) Digital Awards for the 2008 issue of \"\"MIT Technology Review\"\""
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "No expansion of the 2008 magazine article \"Is Google Making Us Stoopid?\" was a finalist for any award based on the available information."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The 2008 \"Is Google Making Us Stupid?\" article by Nicholas G. Carr was a finalist for an award, likely in the form of a nomination for Best Article or Cover Story, but it was The Atlantic magazine that won the 2008 Magazine of the Year award."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "No expansion of the 2008 \"Is Google Making Us Stupid?\" article from \"The Atlantic\" was a finalist for an award based on the available information."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 6429,
+      "question": "What year did The Chronicle of Philanthropy's publishing overlap with Antic?",
+      "ground_truth": "1988",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Chronicle of Philanthropy and Antic's publishing overlap was from 1982 to 1990."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Chronicle of Philanthropy began publishing in 1988. Given that Antic was published from April 1982 until June/July 1990, the overlapping period for both publications was from 1988 to June/July 1990."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Insufficient information to answer the question. The end year of The Chronicle of Philanthropy is required to determine when it overlapped with Antic magazine."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Chronicle of Philanthropy and Antic did not overlap in their publishing years. The Chronicle of Philanthropy began in 1988 while Antic started in 1982."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "search"
+          ],
+          "answer": ""
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Chronicle of Philanthropy and Antic did not overlap in publishing years as Antic was founded in 1982 and The Chronicle of Philanthropy was founded in 1988."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The Chronicle of Philanthropy and Antic did not overlap in their publishing years."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "There is no overlap between The Chronicle of Philanthropy and Antic as their publishing periods did not intersect. The Chronicle of Philanthropy started in 1988 and Antic ended in 1984."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 5542,
+      "question": "The W. H. Shipman House is in what Hawaii county?",
+      "ground_truth": "Hawaii County",
+      "rewards": [
+        1.0,
+        0.6666666666666666,
+        0.5,
+        0.0,
+        0.0,
+        0.6666666666666666,
+        0.0,
+        1.0
+      ],
+      "reward_mean": 0.47916666666666663,
+      "reward_variance": 0.16276041666666669,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Hawaii County"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.6666666666666666,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Hawaii"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.5,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Hilo County"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Hilo"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Hilo"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.6666666666666666,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Hawaii"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Hilo"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Hawaii County"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 6226,
+      "question": "The trophy given to the winner of the college football game between University of Idaho Vandals and University of Montana Grizzlies is derived from which European culture?",
+      "ground_truth": "German",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The European culture from which the Little Brown Stein trophy is derived is German."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The European culture that derived the trophy is German."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The European culture from which the trophy, known as the Little Brown Stein, is derived is German. The trophy is a stein mug, a traditional German drinking vessel, often used for beer."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The European culture from which the Little Brown Stein trophy is likely derived is German or Scandinavian, as steins are traditional drinking mugs originating from these regions."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The European culture from which the Little Brown Stein trophy is derived is German or Bavarian, based on the term \"Stein\" which refers to a traditional beer mug, and the historical context of the name \"Black Plague\" associated with the trophy's background."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The European culture the trophy is derived from likely has German or Austrian roots, as indicated by its name \"Little Brown Stein\". However, without more specific information, this cannot be definitively stated."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Not Found"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The Little Brown Stein trophy does not indicate a European cultural origin."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 5464,
+      "question": "What stadium does the team who has Kent Baer as the defensive coordinator play its home games?",
+      "ground_truth": "Sam Boyd Stadium",
+      "rewards": [
+        0.0,
+        0.4,
+        0.4,
+        0.4,
+        0.4,
+        0.0,
+        0.4,
+        0.4
+      ],
+      "reward_mean": 0.30000000000000004,
+      "reward_variance": 0.030000000000000002,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The home stadium of the team that has Kent Baer as the defensive coordinator in 2012, and thus the answer is the 2012 Military Bowl venue."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "CEFCU Stadium"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "CEFCU Stadium"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "CEFCU Stadium"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "CEFCU Stadium"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Folsom Field"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "CEFCU Stadium"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Washington–Grizzly Stadium"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 4078,
+      "question": "Operation Cold Comfort was a failed raid by a special forces unit founded in what year?",
+      "ground_truth": "1941",
+      "rewards": [
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.0
+      ],
+      "reward_mean": 0.625,
+      "reward_variance": 0.234375,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 1.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1941"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1942"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The founding year of the unit 'Nosy Parks' associated with Operation Cold Comfort could not be determined from the available information."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 1.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1941"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1941"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 1.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1941"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 1.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1941"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1945"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 2820,
+      "question": "The organization that Nicolae Titulescu served two terms as president was founded on what date?",
+      "ground_truth": "10 January 1920",
+      "rewards": [
+        0.5,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.5,
+        1.0
+      ],
+      "reward_mean": 0.5,
+      "reward_variance": 0.1875,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.5,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The League of Nations was founded on January 10, 1920."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "10 January 1920"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The League of Nations was founded on 10 January 1920. Nicolae Titulescu served as President of the League of Nations for two terms, from 1930 to 1932."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The League of Nations was founded on 10 January 1920. Nicolae Titulescu served as President of the League of Nations for two terms from 1930 to 1932. Therefore, the organization Nicolae Titulescu served as president was founded on 10 January 1920."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 1.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "10 January 1920"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "other"
+          ],
+          "answer": "calculate[10-1930 1932-1930]"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.5,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The League of Nations was founded on January 10, 1920."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "10 January 1920"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 251,
+      "question": "What is Opry Mills in Nashville, Tennessee?",
+      "ground_truth": "super-regional shopping mall",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Opry Mills is a super-regional shopping mall in Nashville, Tennessee, that opened in 2000 on the site of the former Opryland USA theme park. It is adjacent to the Grand Ole Opry House and the Gaylord Opryland Resort & Convention Center."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Opry Mills is a super-regional shopping mall located in Nashville, Tennessee. It opened in 2000 on the former site of Opryland USA theme park and is adjacent to the Grand Ole Opry House and the Gaylord Opryland Resort & Convention Center."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Opry Mills is a super-regional shopping mall in Nashville, Tennessee, located on the site of the former Opryland USA theme park, and is adjacent to the Grand Ole Opry House and the Gaylord Opryland Resort & Convention Center."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Opry Mills is a super-regional shopping mall located in Nashville, Tennessee. It was opened in 2000 on the former site of the Opryland USA theme park and is adjacent to the Grand Ole Opry House and the Gaylord Opryland Resort & Convention Center. The mall's name is derived from the Opry theme, and it has experienced some temporary closings and renovations over the years, but it remains an important shopping destination in the region."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Opry Mills is a super-regional shopping mall located in Nashville, Tennessee. It opened in 2000 on the site of Opryland USA, a former theme park. The mall is adjacent to the Grand Ole Opry House and the Gaylord Opryland Resort & Convention Center."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Opry Mills is a super-regional shopping mall located in Nashville, Tennessee. It opened in 2000 on the site of the former Opryland USA theme park. It is adjacent to the Grand Ole Opry House and the Gaylord Opryland Resort & Convention Center."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Opry Mills is a super-regional shopping mall located in Nashville, Tennessee, on the former site of Opryland USA theme park. It is adjacent to the Grand Ole Opry House and the Gaylord Opryland Resort & Convention Center."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Opry Mills is a super-regional shopping mall located in Nashville, Tennessee, which opened in 2000 on the site of the former Opryland USA theme park. It is adjacent to the Grand Ole Opry House and the Gaylord Opryland Resort & Convention Center. The mall contains over 200 stores and features various popular brands."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 6593,
+      "question": "Ed Oxenbould plays Tyler in a film directed by which famous director?",
+      "ground_truth": "M. Night Shyamalan",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.125,
+      "reward_variance": 0.109375,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Walt Disney"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Charles Barton"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Miguel Arteta"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Charles Barton"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Charles Barton"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "M. Night Shyamalan"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Charles Barton"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Charles Barton"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 4690,
+      "question": "Sadok Sassi played for a national team that made its first World Cup in what year?",
+      "ground_truth": "1978",
+      "rewards": [
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "reward_mean": 0.5,
+      "reward_variance": 0.25,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1974"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "1962"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1978"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1978"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The information provided does not confirm Sadok Sassi's participation in the 1986 FIFA World Cup for Morocco. Sadok Sassi played for the Tunisian national team in 1963 and 1972, but there is no evidence of his participation in the 1986 FIFA World Cup for Morocco."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "1963"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1978"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "1978"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 3149,
+      "question": "Otterington railway station was on a 393 mi major railway that linked Edinburgh to what city?",
+      "ground_truth": "London",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Aberdeen"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Based on the available information, there is no major railway line that links Edinburgh to a specific city that passes through Otterington railway station. This suggests Otterington station is not part of any major railway route connecting Edinburgh to a specific city."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Aberdeen"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Glasgow"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "No railway route from Edinburgh to Otterington with a length of 393 miles is mentioned in the available search results."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The major city connected to Otterington railway station on the East Coast Main Line is Edinburgh."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Alnwick"
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Edinburgh"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 4309,
+      "question": "Are both Coldplay and Pierre Bouvier from the same country?",
+      "ground_truth": "no",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "No, Coldplay and Pierre Bouvier are not from the same country. Coldplay originates from England, while Pierre Bouvier is from Canada."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "No, both Coldplay and Pierre Bouvier are not from the same country. Coldplay is from the UK, while Pierre Bouvier is French-American."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "No, Coldplay and Pierre Bouvier are not from the same country."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "No, Coldplay and Pierre Bouvier are not from the same country."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "No, Coldplay and Pierre Bouvier are not from the same country. Coldplay is from the United Kingdom and Pierre Bouvier is from Canada."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "No, both Coldplay and Pierre Bouvier are not from the same country. Coldplay is from the United Kingdom and Pierre Bouvier is from Canada."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "No, Coldplay and Pierre Bouvier are not from the same country."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "No, Coldplay and Pierre Bouvier are not from the same country."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 7158,
+      "question": "This term about a playwright who lived from 1564-1616 presented what about his works? ",
+      "ground_truth": "chronological collection of critical quotations",
+      "rewards": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "reward_mean": 0.0,
+      "reward_variance": 0.0,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "William Shakespeare presented his works through a diverse range of genres, including notable tragedies."
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Shakespeare's works spanned a wide range of genres including comedies, histories, and tragedies. They are known for their enduring popularity and continued revision and republishing."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Shakespeare's works from 1564-1616 primarily included comedies and histories during his early career, and his later plays were predominantly tragedies. His works were often revised by other writers, and some were left unfinished. Shakespeare's plays have been translated into every major living language and are still performed more often than those of any other playwright. His works were also published in separate editions before their inclusion in the First Folio."
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Shakespeare's works are noted for the range from lighter genres like comedies and histories to serious tragedies like Hamlet, Othello, King Lear, and Macbeth. His work was also often revised by other writers, which is reflected in textual evidence and attributions."
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "His works spanned various genres including comedies, histories, and tragedies, and were often revised by other writers."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "His works were considered to be of high quality and had a significant impact on literature."
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Shakespeare's works presented a diverse range of themes and narrative techniques, reflecting the social and political climate of his time."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Ben Jonson's works presented a more serious and often gloomy tone, dealing with themes of death, tragedy, and moral reflection."
+        }
+      ]
+    },
+    {
+      "prompt_idx": 503,
+      "question": "What is the birthday of this Anglo-Irish actress, courtean, and mistress, who was the mother to the illegitimate daughter of King William IV?",
+      "ground_truth": "22 November",
+      "rewards": [
+        0.8,
+        0.0,
+        0.0,
+        0.8,
+        0.8,
+        0.8,
+        0.0,
+        0.4
+      ],
+      "reward_mean": 0.45,
+      "reward_variance": 0.1375,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.8,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "22 November 1761"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "4 July 1890"
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 0.0,
+          "turns": 4,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "19 December 1798"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.8,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "22 November 1761"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.8,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "22 November 1761"
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 0.8,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "22 November 1761]"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.0,
+          "turns": 5,
+          "action_types": [
+            "search",
+            "search",
+            "search",
+            "search",
+            "search"
+          ],
+          "answer": ""
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "27 November 1833"
+        }
+      ]
+    },
+    {
+      "prompt_idx": 2402,
+      "question": "Kenneth L. Gile is the Chief Operating Officer of an airline with its head office in what airport?",
+      "ground_truth": "Dubai International Airport",
+      "rewards": [
+        0.7499999999999999,
+        0.42857142857142855,
+        1.0,
+        0.7499999999999999,
+        0.3157894736842105,
+        1.0,
+        0.4,
+        0.7499999999999999
+      ],
+      "reward_mean": 0.6742951127819549,
+      "reward_variance": 0.061688158513058956,
+      "rollouts": [
+        {
+          "rollout_idx": 0,
+          "reward": 0.7499999999999999,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Terminal 2, Dubai International Airport"
+        },
+        {
+          "rollout_idx": 1,
+          "reward": 0.42857142857142855,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The headquarters of flydubai is in Terminal 2 of Dubai International Airport."
+        },
+        {
+          "rollout_idx": 2,
+          "reward": 1.0,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Dubai International Airport"
+        },
+        {
+          "rollout_idx": 3,
+          "reward": 0.7499999999999999,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Terminal 2, Dubai International Airport"
+        },
+        {
+          "rollout_idx": 4,
+          "reward": 0.3157894736842105,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "The airport where flydubai's head office is located is Dubai International Airport, also known as Dubai Airport."
+        },
+        {
+          "rollout_idx": 5,
+          "reward": 1.0,
+          "turns": 2,
+          "action_types": [
+            "search",
+            "finish"
+          ],
+          "answer": "Dubai International Airport"
+        },
+        {
+          "rollout_idx": 6,
+          "reward": 0.4,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "The headquarters of flydubai is located in Terminal 2 of Dubai International Airport."
+        },
+        {
+          "rollout_idx": 7,
+          "reward": 0.7499999999999999,
+          "turns": 3,
+          "action_types": [
+            "search",
+            "search",
+            "finish"
+          ],
+          "answer": "Terminal 2, Dubai International Airport"
+        }
+      ]
+    }
+  ]
+}

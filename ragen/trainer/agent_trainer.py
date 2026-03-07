@@ -7,6 +7,7 @@ import os
 import uuid
 import ray
 import torch
+import json
 import numpy as np
 import collections
 from collections import defaultdict
@@ -425,6 +426,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
         # dump generations
         val_data_dir = self.config.trainer.get("validation_data_dir", None)
         if val_data_dir:
+            os.makedirs(val_data_dir, exist_ok=True)
             self._dump_generations(
                 inputs=sample_inputs,
                 outputs=sample_outputs,
@@ -432,6 +434,29 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                 reward_extra_infos_dict=reward_extra_infos_dict,
                 dump_path=val_data_dir,
             )
+            # Dump raw validation reward values for downstream plotting/analysis.
+            val_group_size = int(self.config.es_manager.val.group_size)
+            val_env_groups = int(self.config.es_manager.val.env_groups)
+            rewards = [float(x) for x in sample_scores]
+            reward_matrix = None
+            expected = val_group_size * val_env_groups
+            if len(rewards) == expected and val_group_size > 0:
+                reward_matrix = [
+                    rewards[i * val_group_size : (i + 1) * val_group_size]
+                    for i in range(val_env_groups)
+                ]
+            reward_dump = {
+                "global_step": int(self.global_steps),
+                "validation_step_count": int(self.config.trainer.validation_steps),
+                "val_env_groups": val_env_groups,
+                "val_group_size": val_group_size,
+                "num_rewards": len(rewards),
+                "rewards": rewards,
+                "reward_matrix": reward_matrix,
+            }
+            reward_json_path = os.path.join(val_data_dir, f"val_rewards_step_{self.global_steps}.json")
+            with open(reward_json_path, "w", encoding="utf-8") as f:
+                json.dump(reward_dump, f, ensure_ascii=False, indent=2)
 
         for key_info, lst in reward_extra_infos_dict.items():
             assert len(lst) == 0 or len(lst) == len(sample_scores), f"{key_info}: {len(lst)=}, {len(sample_scores)=}"

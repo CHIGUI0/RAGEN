@@ -102,13 +102,15 @@ class DeepCoderEnv(BaseLanguageBasedEnv):
                 self.render_cache = observation
             return observation, reward, done, info
 
-        is_correct, detail = run_deepcoder_sandbox(
+        is_correct, detail, passed_tests, total_tests, runnable = run_deepcoder_sandbox(
             action,
             tests=self.current_tests or [],
             metadata=self.current_metadata or {},
             starter_code=self.current_starter_code or "",
         )
-        reward = 1.0 if is_correct else 0.0
+        pass_reward = (passed_tests / total_tests) if total_tests > 0 else 0.0
+        runnable_bonus = 0.2 if runnable else 0.0
+        reward = pass_reward + runnable_bonus
         observation = "Correct!" if is_correct else "Incorrect."
         done = True if is_correct else (self.step_num + 1) >= self.config.max_steps
         self.step_num += 1
@@ -118,6 +120,11 @@ class DeepCoderEnv(BaseLanguageBasedEnv):
             "action_is_valid": is_valid,
             "success": is_correct,
             "detail": detail,
+            "passed_tests": passed_tests,
+            "total_tests": total_tests,
+            "runnable": runnable,
+            "pass_reward": pass_reward,
+            "runnable_bonus": runnable_bonus,
         }
         if not done and self.current_prompt:
             self.render_cache = f"{self.current_prompt}\n\nFeedback: {detail}"
@@ -129,13 +136,15 @@ class DeepCoderEnv(BaseLanguageBasedEnv):
         return self.render_cache
 
     def compute_reward(self, action: str, **kwargs) -> float:
-        is_correct, _ = run_deepcoder_sandbox(
+        _, _, passed_tests, total_tests, runnable = run_deepcoder_sandbox(
             action,
             tests=self.current_tests or [],
             metadata=self.current_metadata or {},
             starter_code=self.current_starter_code or "",
         )
-        return 1.0 if is_correct else 0.0
+        pass_reward = (passed_tests / total_tests) if total_tests > 0 else 0.0
+        runnable_bonus = 0.2 if runnable else 0.0
+        return pass_reward + runnable_bonus
 
     def close(self) -> None:
         self.render_cache = None

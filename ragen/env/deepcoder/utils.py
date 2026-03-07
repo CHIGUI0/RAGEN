@@ -99,9 +99,9 @@ def run_deepcoder_sandbox(
     metadata: Optional[dict] = None,
     starter_code: str = "",
     timeout_seconds: int = 5,
-) -> Tuple[bool, str]:
+) -> Tuple[bool, str, int, int, bool]:
     if not tests:
-        return False, "No tests available."
+        return False, "No tests available.", 0, 0, False
 
     func_name = None
     if metadata:
@@ -127,6 +127,11 @@ def run_deepcoder_sandbox(
         user_code = f"{header}\n\n{body}"
     else:
         user_code = header or body
+
+    total_tests = len(tests)
+    passed_tests = 0
+    runnable = True
+    first_failure = None
 
     for idx, test in enumerate(tests):
         testtype = test.get("testtype")
@@ -163,30 +168,53 @@ def run_deepcoder_sandbox(
                 ]
             )
 
-            print(harness)
             ok, out, err = _exec_python(harness, stdin_input="", timeout_seconds=timeout_seconds)
             if not ok:
-                return False, f"Runtime error on test {idx}: {err or out}"
+                runnable = False
+                if first_failure is None:
+                    first_failure = f"Runtime error on test {idx}: {err or out}"
+                continue
             try:
                 payload = json.loads(out.strip().splitlines()[-1])
             except Exception:
-                return False, f"Malformed output on test {idx}: {out.strip()}"
+                runnable = False
+                if first_failure is None:
+                    first_failure = f"Malformed output on test {idx}: {out.strip()}"
+                continue
             if not payload.get("ok", False):
-                return False, f"Exception on test {idx}: {payload.get('error')}"
+                runnable = False
+                if first_failure is None:
+                    first_failure = f"Exception on test {idx}: {payload.get('error')}"
+                continue
             if str(payload.get("result")) != str(expected):
-                return False, f"Wrong answer on test {idx}: got {payload.get('result')} expected {expected}"
+                if first_failure is None:
+                    first_failure = f"Wrong answer on test {idx}: got {payload.get('result')} expected {expected}"
+                continue
+            passed_tests += 1
         else:
             stdin_input = test.get("input", "")
             harness = user_code + "\n"
             ok, out, err = _exec_python(harness, stdin_input=stdin_input, timeout_seconds=timeout_seconds)
             if not ok:
-                return False, f"Runtime error on test {idx}: {err or out}"
+                runnable = False
+                if first_failure is None:
+                    first_failure = f"Runtime error on test {idx}: {err or out}"
+                continue
             got = out.strip()
             exp = str(expected).strip()
             if str(got) != str(exp):
-                return False, f"Wrong answer on test {idx}: got {got} expected {exp}"
+                if first_failure is None:
+                    first_failure = f"Wrong answer on test {idx}: got {got} expected {exp}"
+                continue
+            passed_tests += 1
 
-    return True, "All tests passed."
+    is_correct = passed_tests == total_tests and total_tests > 0
+    if is_correct:
+        detail = "All tests passed."
+    else:
+        summary = f"Passed {passed_tests}/{total_tests} tests."
+        detail = summary if first_failure is None else f"{summary} {first_failure}"
+    return is_correct, detail, passed_tests, total_tests, runnable
 
 
 def _exec_python(code: str, stdin_input: str, timeout_seconds: int = 5) -> Tuple[bool, str, str]:

@@ -357,6 +357,8 @@ PY
         actor_rollout_ref.rollout.rollout_filter_strategy=top_p \
         actor_rollout_ref.rollout.rollout_filter_value="${top_p}" \
         actor_rollout_ref.rollout.rollout_filter_include_zero="${include_zero}" \
+        actor_rollout_ref.rollout.rollout_filter_type=largest \
+        actor_rollout_ref.rollout.rollout_filter_metric=reward_variance \
         custom_envs.CoordFrozenLake.env_config.success_rate="${success_rate}" \
         actor_rollout_ref.actor.checkpoint.save_contents=[model] \
         critic.checkpoint.save_contents=[model] \

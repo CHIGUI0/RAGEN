@@ -154,6 +154,12 @@ $$\hat{I}(X; Z) = \frac{1}{NK} \sum_{i,k} \left[ \log p(z_{i,k} \mid x_i) - \log
 - **Low $I(X; Z)$**: Reasoning has weak input dependence
 - **Upper Bound**: $I(X; Z) \leq H(X) = \log N$ (when $X$ is uniform)
 
+**Practical Note on Negative Values**:
+- The true mutual information satisfies $I(X; Z) \geq 0$.
+- Our logged `mi_estimate` and `mi_seq_estimate` are finite-sample Monte Carlo estimates, not exact MI.
+- Because they average noisy sample terms of the form $\log p(z \mid x) - \log p_{\text{mix}}(z)$, they can temporarily dip below zero when the true MI is near zero or the sampled batch is noisy.
+- In practice, a small negative value should usually be read as "approximately zero input dependence within estimation noise," not as a violation of information theory.
+
 **Code Reference** (`collapse_metrics.py:563-590`):
 ```python
 def _compute_mi_estimate(self, matched, marginal, N_prompts):
@@ -285,6 +291,11 @@ $$\text{MI-ZScore} = \frac{\text{matched} - \text{marginal}}{\sigma_{\text{margi
 where $\sigma_{\text{marginal}} = \text{std}(\text{marginal}_{i,k})$ and $\epsilon = 10^{-3}$ for stability.
 
 **Interpretation**: Measures how many standard deviations the matched log-prob is above the marginal. More robust to scale changes during training.
+
+**Practical Note on Extreme Negative Z-Scores**:
+- Negative `mi_zscore*` values are normal; they simply mean the matched log-prob is below the marginal baseline on that batch.
+- Very large-magnitude values, especially for `mi_zscore_seq`, often happen when `marginal_std` or `marginal_std_seq` becomes very small, so the normalization denominator is close to `std_eps`.
+- When this happens, interpret `mi_zscore*` together with `marginal_std*` and `mi_estimate` rather than in isolation.
 
 **Code Reference** (`collapse_metrics.py:302-320`):
 ```python

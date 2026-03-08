@@ -449,6 +449,9 @@ class ContextManager:
         if max_length is None:
             return messages
 
+        # Reserve tokens for suffix appended after truncation (e.g. "<think>" or "<answer>")
+        max_length = max_length - 5
+
         # Calculate current length
         full_text = self.tokenizer.apply_chat_template(
             messages,

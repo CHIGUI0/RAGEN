@@ -24,7 +24,7 @@ class LocalRetriever:
         self.data_dir = Path(data_dir)
         self.corpus = []
         self.dense_index = None
-        self.encoder = SentenceTransformer("intfloat/e5-base-v2")
+        self.encoder = SentenceTransformer("intfloat/e5-base-v2", device="cpu")
 
         self._load_data()
 

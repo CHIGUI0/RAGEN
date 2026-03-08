@@ -103,7 +103,7 @@ def main():
 
     # Start server
     print(f"Starting dense retrieval server on {args.host}:{args.port}")
-    app.run(host=args.host, port=args.port, debug=args.debug, threaded=False)
+    app.run(host=args.host, port=args.port, debug=args.debug)
 
 
 if __name__ == "__main__":

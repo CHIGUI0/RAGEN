@@ -275,7 +275,6 @@ class CollapseDetector:
             unique_groups,
             reasoning_ids,
             reasoning_mask,
-            log_prob_context=f"collapse.{ema_key or 'cross_log_probs'}",
         )
 
         # Convert group_ids to column indices
@@ -461,7 +460,6 @@ class CollapseDetector:
         unique_groups: np.ndarray,
         reasoning_ids: torch.Tensor,
         reasoning_mask: torch.Tensor,
-        log_prob_context: str,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Compute cross log probabilities: ℓ_j(z_{i,k}) for all (i,k,j) pairs.
@@ -538,13 +536,13 @@ class CollapseDetector:
                     "responses": padded_reasoning_ids,
                 },
                 meta_info=batch.meta_info.copy() if batch.meta_info else {},
+                auto_padding=True,
             )
-            cross_batch.meta_info["log_prob_context"] = log_prob_context
 
             # Compute log probabilities
             with torch.no_grad():
                 output = compute_log_prob_fn(cross_batch)
-                log_probs = output.batch["old_log_probs"][:NK]  # (NK, response_len)
+                log_probs =  log_probs = output.batch["old_log_probs"][:NK]  # (NK, response_len) 
 
             # Get response mask to sum over valid response tokens
             mask = reasoning_mask

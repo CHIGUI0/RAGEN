@@ -22,7 +22,6 @@ REGISTERED_ENVS = {
     'sokoban': SokobanEnv,
     'frozen_lake': FrozenLakeEnv,
     'metamathqa': MetaMathQAEnv,
-    'deepcoder': DeepCoderEnv,
     'lean': LeanEnv,
     'deepcoder': DeepCoderEnv,
     'sudoku': SudokuEnv,

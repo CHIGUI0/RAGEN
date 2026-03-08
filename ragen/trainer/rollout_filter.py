@@ -419,9 +419,6 @@ class RewardRolloutFilter(RolloutFilter):
             }
         )
 
-        # Store the raw reward matrix for wandb table logging (num_groups x group_size)
-        metrics["rollout/_reward_matrix"] = rm_scores.detach().cpu()
-
         if self.strategy == "top_p" and self.config.value >= 1 and self.config.include_zero:
             return batch, metrics
 
@@ -476,18 +473,7 @@ class EntropyRolloutFilter(RolloutFilter):
         num_groups = self.num_groups
 
         if "entropys" not in batch.batch:
-            had_log_prob_context = batch.meta_info is not None and "log_prob_context" in batch.meta_info
-            original_log_prob_context = batch.meta_info.get("log_prob_context") if batch.meta_info is not None else None
-            if batch.meta_info is None:
-                batch.meta_info = {}
-            batch.meta_info["log_prob_context"] = f"rollout_filter.{self.config.metric}"
-            try:
-                log_prob = self._compute_log_prob(batch)
-            finally:
-                if had_log_prob_context:
-                    batch.meta_info["log_prob_context"] = original_log_prob_context
-                else:
-                    batch.meta_info.pop("log_prob_context", None)
+            log_prob = self._compute_log_prob(batch)
             # Only keep entropys to avoid conflicts with later logprob recomputation in agent_trainer.py
             batch.batch["entropys"] = log_prob.batch["entropys"]
 

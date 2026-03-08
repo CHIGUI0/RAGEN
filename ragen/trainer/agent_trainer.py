@@ -663,6 +663,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                     batch = self.agent_proxy.rollout(batch, val=False)
 
                 metrics = {}
+
                 # Compute collapse detection metrics before filtering (for fair comparison)
                 with marked_timer("collapse_metrics", timing_raw, color="cyan"):
                     collapse_metrics = self.collapse_detector.compute_collapse_metrics(
@@ -675,27 +676,6 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                 with marked_timer("filter", timing_raw):
                     # Filter first, then adjust batch size
                     batch, filter_metrics = self.rollout_filter.filter(batch)
-
-                    # Log the per-group raw rewards as a wandb table when available.
-                    reward_matrix = filter_metrics.pop("rollout/_reward_matrix", None)
-                    if reward_matrix is not None:
-                        try:
-                            import wandb
-
-                            num_groups, group_size = reward_matrix.shape
-                            columns = [f"group_{i}" for i in range(num_groups)]
-                            table_data = []
-                            for sample_idx in range(group_size):
-                                table_data.append(
-                                    [reward_matrix[group_idx, sample_idx].item() for group_idx in range(num_groups)]
-                                )
-                            filter_metrics["rollout/reward_table"] = wandb.Table(
-                                columns=columns,
-                                data=table_data,
-                            )
-                        except ImportError:
-                            pass
-
                     metrics.update(filter_metrics)
 
                     # Add kept ratio to meta_info for loss scaling
@@ -871,18 +851,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                 # recompute old_log_probs
 
                 with marked_timer("old_log_prob", timing_raw, color="blue"):
-                    had_log_prob_context = batch.meta_info is not None and "log_prob_context" in batch.meta_info
-                    old_log_prob_context = batch.meta_info.get("log_prob_context") if batch.meta_info is not None else None
-                    if batch.meta_info is None:
-                        batch.meta_info = {}
-                    batch.meta_info["log_prob_context"] = "trainer.old_log_prob"
-                    try:
-                        old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
-                    finally:
-                        if had_log_prob_context:
-                            batch.meta_info["log_prob_context"] = old_log_prob_context
-                        else:
-                            batch.meta_info.pop("log_prob_context", None)
+                    old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
                     entropys = old_log_prob.batch["entropys"]
                     response_masks = batch.batch["response_mask"]
                     loss_agg_mode = self.config.actor_rollout_ref.actor.loss_agg_mode

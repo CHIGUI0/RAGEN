@@ -54,12 +54,12 @@ bash scripts/runs/run_webshop_small_combos.sh --steps 200 --gpus 6 --filters nof
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--steps N` | 400 | Training steps |
+| `--steps N` | 100 | Training steps |
 | `--gpus LIST` | auto-detect | Comma-separated GPU IDs |
 | `--gpus-per-exp N` | 1 | GPUs per experiment |
 | `--combos LIST` | all | Which combos to run (1-4) |
 | `--filters LIST` | all | filter, nofilter, or all |
-| `--save-freq N` | 200 | Checkpoint save frequency |
+| `--save-freq N` | 100 | Checkpoint save frequency |
 | `--cooldown N` | 30 | Seconds between runs on same GPU slot |
 | `--gpu-memory-utilization V` | 0.3 | vLLM rollout GPU memory fraction |
 

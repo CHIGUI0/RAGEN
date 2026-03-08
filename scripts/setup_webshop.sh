@@ -4,7 +4,7 @@
 set -e
 
 echo "Setting up webshop..."
-echo "NOTE: please run scripts/setup_ragen.sh before running this script"
+echo "NOTE: please run scripts/setup_ragen.sh or scripts/setup_b200.sh before running this script"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -16,19 +16,35 @@ print_step() {
     echo -e "${BLUE}[Step] ${1}${NC}"
 }
 
-# Main installation process
-# TODO: merge this with the main setup script with an option to install webshop
-# Install if you want to use webshop
+ensure_conda_env() {
+    if ! command -v conda &> /dev/null; then
+        echo "Conda is not installed. Please install Conda first."
+        exit 1
+    fi
+    if [ -z "${CONDA_DEFAULT_ENV:-}" ] || [ "${CONDA_DEFAULT_ENV}" != "ragen" ]; then
+        CONDA_PATH=$(conda info --base)
+        source "$CONDA_PATH/etc/profile.d/conda.sh"
+        conda activate ragen
+    fi
+}
+
+ensure_conda_env
+
+# WebShop-specific system dependencies.
+print_step "Installing WebShop system dependencies..."
 sudo apt update
 sudo apt install default-jdk -y
 conda install -c conda-forge openjdk=21 maven -y
 
-# Install remaining requirements
-print_step "Installing additional requirements..."
-pip install -r requirements.txt
+# WebShop-only Python extras. Avoid reinstalling the full base requirements
+# because the B200 setup path intentionally manages those separately.
+print_step "Installing WebShop Python dependencies..."
+pip install beautifulsoup4 cleantext flask html2text rank_bm25 pyserini thefuzz gdown spacy rich
 
-# webshop installation, model loading
+# WebShop package and models.
+print_step "Installing WebShop package..."
 pip install -e external/webshop-minimal/ --no-dependencies
+print_step "Downloading spaCy models..."
 python -m spacy download en_core_web_sm
 python -m spacy download en_core_web_lg
 
@@ -37,7 +53,7 @@ python scripts/download_data.py
 
 # Optional: download full data set
 print_step "Downloading full data set..."
-conda install conda-forge::gdown
+conda install -c conda-forge gdown -y
 mkdir -p external/webshop-minimal/webshop_minimal/data/full
 cd external/webshop-minimal/webshop_minimal/data/full
 gdown https://drive.google.com/uc?id=1A2whVgOO0euk5O13n2iYDM0bQRkkRduB # items_shuffle
@@ -46,4 +62,3 @@ cd ../../../../..
 
 echo -e "${GREEN}Installation completed successfully!${NC}"
 echo "To activate the environment, run: conda activate ragen"
-

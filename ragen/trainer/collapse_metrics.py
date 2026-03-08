@@ -40,6 +40,7 @@ class CollapseDetector:
         num_samples: Optional[int] = None,
         std_eps: float = 1e-3,
         ema_decay: float = 0.9,
+        log_prob_world_size: int = 1,
     ):
         """
         Initialize the collapse detector.
@@ -53,6 +54,7 @@ class CollapseDetector:
             num_samples: Number of (x,z) pairs to sample (None = use all)
             std_eps: Small constant for std normalization stability
             ema_decay: EMA decay for cross-time std tracking
+            log_prob_world_size: Number of actor ranks participating in compute_log_prob
         """
         self.compute_freq = compute_freq
         self.micro_batch_size = micro_batch_size
@@ -62,6 +64,7 @@ class CollapseDetector:
         self.num_samples = num_samples
         self.std_eps = std_eps
         self.ema_decay = ema_decay
+        self.log_prob_world_size = max(int(log_prob_world_size), 1)
         self._ema_marginal_std = {}
         self._ema_marginal_std_seq = {}
 
@@ -513,16 +516,24 @@ class CollapseDetector:
             cross_input_ids = torch.cat(cross_input_ids_list, dim=0)  # (NK, seq_len)
             cross_attention_mask = torch.cat(cross_attention_mask_list, dim=0)
             cross_position_ids = torch.cat(cross_position_ids_list, dim=0)
+            padded_reasoning_ids = reasoning_ids
+
+            if self.log_prob_world_size > 1:
+                padded_size = math.ceil(NK / self.log_prob_world_size) * self.log_prob_world_size
+                pad_rows = padded_size - NK
+                if pad_rows > 0:
+                    cross_input_ids = self._pad_batch_rows(cross_input_ids, pad_rows)
+                    cross_attention_mask = self._pad_batch_rows(cross_attention_mask, pad_rows)
+                    cross_position_ids = self._pad_batch_rows(cross_position_ids, pad_rows)
+                    padded_reasoning_ids = self._pad_batch_rows(reasoning_ids, pad_rows)
 
             # Create cross batch DataProto
-            # Collapse metrics may sample any NK; enable DataProto auto padding so
-            # distributed chunking does not require NK % dp_size == 0.
             cross_batch = DataProto.from_dict(
                 tensors={
                     "input_ids": cross_input_ids,
                     "attention_mask": cross_attention_mask,
                     "position_ids": cross_position_ids,
-                    "responses": reasoning_ids,
+                    "responses": padded_reasoning_ids,
                 },
                 meta_info=batch.meta_info.copy() if batch.meta_info else {},
                 auto_padding=True,
@@ -531,7 +542,7 @@ class CollapseDetector:
             # Compute log probabilities
             with torch.no_grad():
                 output = compute_log_prob_fn(cross_batch)
-                log_probs = output.batch["old_log_probs"]  # (NK, response_len)
+                log_probs =  log_probs = output.batch["old_log_probs"][:NK]  # (NK, response_len) 
 
             # Get response mask to sum over valid response tokens
             mask = reasoning_mask
@@ -544,6 +555,13 @@ class CollapseDetector:
             cross_log_probs_sum[:, j] = seq_log_probs_sum
 
         return cross_log_probs, cross_log_probs_sum
+
+    @staticmethod
+    def _pad_batch_rows(tensor: torch.Tensor, pad_rows: int) -> torch.Tensor:
+        if pad_rows <= 0:
+            return tensor
+        pad = tensor[-1:].expand(pad_rows, *tensor.shape[1:]).clone()
+        return torch.cat([tensor, pad], dim=0)
 
     def _compute_log_prob_stats(
         self,

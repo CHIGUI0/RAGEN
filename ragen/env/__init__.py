@@ -12,6 +12,8 @@ from .lean.config import LeanEnvConfig
 from .lean.env import LeanEnv
 from .sudoku.config import SudokuEnvConfig
 from .sudoku.env import SudokuEnv
+from .deepcoder.config import DeepCoderEnvConfig
+from .deepcoder.env import DeepCoderEnv
 
 
 REGISTERED_ENVS = {
@@ -21,6 +23,7 @@ REGISTERED_ENVS = {
     'frozen_lake': FrozenLakeEnv,
     'metamathqa': MetaMathQAEnv,
     'lean': LeanEnv,
+    'deepcoder': DeepCoderEnv,
     'sudoku': SudokuEnv,
 }
 
@@ -30,6 +33,7 @@ REGISTERED_ENV_CONFIGS = {
     'sokoban': SokobanEnvConfig,
     'frozen_lake': FrozenLakeEnvConfig,
     'metamathqa': MetaMathQAEnvConfig,
+    'deepcoder': DeepCoderEnvConfig,
     'lean': LeanEnvConfig,
     'sudoku': SudokuEnvConfig,
 }

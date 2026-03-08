@@ -499,6 +499,8 @@ class RayAgentTrainer(VerlRayPPOTrainer):
         if not enable_think:
             collapse_first = False
             collapse_multi = False
+        trainer_nnodes = int(self.config.trainer.get("nnodes", 1) or 1)
+        trainer_n_gpus = int(self.config.trainer.get("n_gpus_per_node", 1) or 1)
 
         self.collapse_detector = CollapseDetector(
             compute_freq=collapse_cfg.get("compute_freq", 10),
@@ -509,6 +511,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
             num_samples=num_samples,
             std_eps=collapse_cfg.get("std_eps", 1e-3),
             ema_decay=collapse_cfg.get("ema_decay", 0.9),
+            log_prob_world_size=trainer_nnodes * trainer_n_gpus,
         )
 
 

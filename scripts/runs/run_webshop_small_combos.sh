@@ -244,10 +244,13 @@ run_experiment() {
     model_path=$(get_model_path "$model_name")
 
     local filter_value
+    local include_zero
     if [ "$filter" = "filter" ]; then
         filter_value=0.9
+        include_zero=False
     else
         filter_value=1.0
+        include_zero=True
     fi
     local filter_strategy="top_p"
 
@@ -263,7 +266,7 @@ run_experiment() {
         "actor_rollout_ref.rollout.rollout_filter_top_p_prob_mode=softmax"
         "actor_rollout_ref.rollout.rollout_filter_type=largest"
         "actor_rollout_ref.rollout.rollout_filter_metric=reward_variance"
-        "actor_rollout_ref.rollout.rollout_filter_include_zero=True"
+        "actor_rollout_ref.rollout.rollout_filter_include_zero=${include_zero}"
     )
 
     local env_overrides=()

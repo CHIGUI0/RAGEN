@@ -109,8 +109,7 @@ class DeepCoderEnv(BaseLanguageBasedEnv):
             starter_code=self.current_starter_code or "",
         )
         pass_reward = (passed_tests / total_tests) if total_tests > 0 else 0.0
-        runnable_bonus = 0.2 if runnable else 0.0
-        reward = pass_reward + runnable_bonus
+        reward = pass_reward
         observation = "Correct!" if is_correct else "Incorrect."
         done = True if is_correct else (self.step_num + 1) >= self.config.max_steps
         self.step_num += 1
@@ -123,8 +122,7 @@ class DeepCoderEnv(BaseLanguageBasedEnv):
             "passed_tests": passed_tests,
             "total_tests": total_tests,
             "runnable": runnable,
-            "pass_reward": pass_reward,
-            "runnable_bonus": runnable_bonus,
+            "pass_reward": pass_reward
         }
         if not done and self.current_prompt:
             self.render_cache = f"{self.current_prompt}\n\nFeedback: {detail}"
@@ -143,8 +141,7 @@ class DeepCoderEnv(BaseLanguageBasedEnv):
             starter_code=self.current_starter_code or "",
         )
         pass_reward = (passed_tests / total_tests) if total_tests > 0 else 0.0
-        runnable_bonus = 0.2 if runnable else 0.0
-        return pass_reward + runnable_bonus
+        return pass_reward
 
     def close(self) -> None:
         self.render_cache = None

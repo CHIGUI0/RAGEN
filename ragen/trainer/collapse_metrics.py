@@ -2,8 +2,8 @@
 Collapse detection metrics for RL training.
 
 Distinguishes two collapse phenomena:
-- Entropy Collapse: Model becomes more deterministic per input (low H(R|X))
-- Template Collapse: Reasoning becomes input-independent (low I(X;R))
+- Entropy Collapse: Model becomes more deterministic per input (low H(Z|X))
+- Template Collapse: Reasoning becomes input-independent (low I(X;Z))
 
 Key insight: We compute MI under the batch's empirical input distribution (uniform over prompts),
 not the true p(x). This is exactly what's needed for diagnosing template collapse.
@@ -26,7 +26,7 @@ class CollapseDetector:
     Detects template collapse and entropy collapse in RL training.
 
     Key metrics:
-    - MI Estimate: Î(X;R) - High = healthy, Low = template collapse
+    - MI Estimate: Î(X;Z) - High = healthy, Low = template collapse
     - Retrieval Accuracy: Acc - High = healthy, ~1/N = template collapse
     """
 
@@ -40,6 +40,7 @@ class CollapseDetector:
         num_samples: Optional[int] = None,
         std_eps: float = 1e-3,
         ema_decay: float = 0.9,
+        log_prob_world_size: int = 1,
     ):
         """
         Initialize the collapse detector.
@@ -50,9 +51,10 @@ class CollapseDetector:
             context_window_mode: Context window mode ("full", "single_turn", "limited_multi_turn")
             multi_turn_enabled: Whether to use multi-turn sampling for MI computation
             first_turn_enabled: Whether to compute first-turn metrics
-            num_samples: Number of (x,r) pairs to sample (None = use all)
+            num_samples: Number of (x,z) pairs to sample (None = use all)
             std_eps: Small constant for std normalization stability
             ema_decay: EMA decay for cross-time std tracking
+            log_prob_world_size: Number of actor ranks participating in compute_log_prob
         """
         self.compute_freq = compute_freq
         self.micro_batch_size = micro_batch_size
@@ -62,6 +64,7 @@ class CollapseDetector:
         self.num_samples = num_samples
         self.std_eps = std_eps
         self.ema_decay = ema_decay
+        self.log_prob_world_size = max(int(log_prob_world_size), 1)
         self._ema_marginal_std = {}
         self._ema_marginal_std_seq = {}
 
@@ -272,6 +275,7 @@ class CollapseDetector:
             unique_groups,
             reasoning_ids,
             reasoning_mask,
+            log_prob_context=f"collapse.{ema_key or 'cross_log_probs'}",
         )
 
         # Convert group_ids to column indices
@@ -457,14 +461,15 @@ class CollapseDetector:
         unique_groups: np.ndarray,
         reasoning_ids: torch.Tensor,
         reasoning_mask: torch.Tensor,
+        log_prob_context: str,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Compute cross log probabilities: ℓ_j(r_{i,k}) for all (i,k,j) pairs.
+        Compute cross log probabilities: ℓ_j(z_{i,k}) for all (i,k,j) pairs.
 
-        For each reasoning r_{i,k} and each prompt x_j:
-        1. Construct sequence [x_j | r_{i,k}]
+        For each reasoning z_{i,k} and each prompt x_j:
+        1. Construct sequence [x_j | z_{i,k}]
         2. Compute teacher-forcing log prob
-        3. Sum over reasoning tokens → ℓ_j(r_{i,k})
+        3. Sum over reasoning tokens → ℓ_j(z_{i,k})
 
         Returns:
             cross_log_probs: (NK, N) per-token mean log prob tensor
@@ -485,7 +490,7 @@ class CollapseDetector:
             prompt = prompts[gid].to(device)  # (prompt_len,)
             prompt_len = prompt.shape[0]
 
-            # Create cross batch: [x_j | r_{i,k}] for all reasoning sequences
+            # Create cross batch: [x_j | z_{i,k}] for all reasoning sequences
             cross_input_ids_list = []
             cross_attention_mask_list = []
             cross_position_ids_list = []
@@ -513,25 +518,33 @@ class CollapseDetector:
             cross_input_ids = torch.cat(cross_input_ids_list, dim=0)  # (NK, seq_len)
             cross_attention_mask = torch.cat(cross_attention_mask_list, dim=0)
             cross_position_ids = torch.cat(cross_position_ids_list, dim=0)
+            padded_reasoning_ids = reasoning_ids
+
+            if self.log_prob_world_size > 1:
+                padded_size = math.ceil(NK / self.log_prob_world_size) * self.log_prob_world_size
+                pad_rows = padded_size - NK
+                if pad_rows > 0:
+                    cross_input_ids = self._pad_batch_rows(cross_input_ids, pad_rows)
+                    cross_attention_mask = self._pad_batch_rows(cross_attention_mask, pad_rows)
+                    cross_position_ids = self._pad_batch_rows(cross_position_ids, pad_rows)
+                    padded_reasoning_ids = self._pad_batch_rows(reasoning_ids, pad_rows)
 
             # Create cross batch DataProto
-            # Collapse metrics may sample any NK; enable DataProto auto padding so
-            # distributed chunking does not require NK % dp_size == 0.
             cross_batch = DataProto.from_dict(
                 tensors={
                     "input_ids": cross_input_ids,
                     "attention_mask": cross_attention_mask,
                     "position_ids": cross_position_ids,
-                    "responses": reasoning_ids,
+                    "responses": padded_reasoning_ids,
                 },
                 meta_info=batch.meta_info.copy() if batch.meta_info else {},
-                auto_padding=True,
             )
+            cross_batch.meta_info["log_prob_context"] = log_prob_context
 
             # Compute log probabilities
             with torch.no_grad():
                 output = compute_log_prob_fn(cross_batch)
-                log_probs = output.batch["old_log_probs"]  # (NK, response_len)
+                log_probs = output.batch["old_log_probs"][:NK]  # (NK, response_len)
 
             # Get response mask to sum over valid response tokens
             mask = reasoning_mask
@@ -544,6 +557,13 @@ class CollapseDetector:
             cross_log_probs_sum[:, j] = seq_log_probs_sum
 
         return cross_log_probs, cross_log_probs_sum
+
+    @staticmethod
+    def _pad_batch_rows(tensor: torch.Tensor, pad_rows: int) -> torch.Tensor:
+        if pad_rows <= 0:
+            return tensor
+        pad = tensor[-1:].expand(pad_rows, *tensor.shape[1:]).clone()
+        return torch.cat([tensor, pad], dim=0)
 
     def _compute_log_prob_stats(
         self,
@@ -569,11 +589,11 @@ class CollapseDetector:
         """
         Compute mutual information estimate.
 
-        Î(X;R) = E[log p(r|x) - log p_mix(r)]
+        Î(X;Z) = E[log p(z|x) - log p_mix(z)]
 
         Args:
-            matched: log p(r|x) for matched prompt
-            marginal: log p_mix(r) under uniform prompt mixture
+            matched: log p(z|x) for matched prompt
+            marginal: log p_mix(z) under uniform prompt mixture
             N_prompts: Number of unique prompts
         Returns:
             Dictionary of MI-related metrics
@@ -599,7 +619,7 @@ class CollapseDetector:
         """
         Compute retrieval accuracy.
 
-        Acc = fraction where argmax_j ℓ_j(r) matches the true prompt.
+        Acc = fraction where argmax_j ℓ_j(z) matches the true prompt.
         If col_signatures are provided, columns with identical prompts are treated as correct.
 
         Args:
@@ -680,8 +700,8 @@ class CollapseDetector:
         marginal_sum: torch.Tensor,
     ) -> Dict[str, float]:
         """
-        Estimate H(R|X) using the matched log-probabilities of the sampled reasoning.
-        And Estimate reasoning entropy H(R) = H(R|X) + I(X;R).
+        Estimate H(Z|X) using the matched log-probabilities of the sampled reasoning.
+        And estimate reasoning entropy H(Z) = H(Z|X) + I(X;Z).
         Per-token estimates are length-normalized; *_seq_est uses summed log probs.
         """
         matched_mean = matched.mean().item()
@@ -706,7 +726,7 @@ class CollapseDetector:
         group_ids: np.ndarray,
     ) -> Tuple[List, List, np.ndarray]:
         """
-        Sample (x, r) pairs from first-turn data with uniform sampling.
+        Sample (x, z) pairs from first-turn data with uniform sampling.
         """
         if isinstance(first_turn_prompt_ids, np.ndarray):
             first_turn_prompt_ids = list(first_turn_prompt_ids)

@@ -4,7 +4,7 @@ This directory is for storing project-level CSV curve data and plotting figures.
 
 ## Data Organization
 
-- Store all data under the CSV data folder: [csv_data](./scripts/draw_RL_length_change/csv_data)
+- Store all data under the CSV data folder: csv_data
 - Create one folder per project: `csv_data/<project_name>/`
 - Each project folder should contain:
   - one or more CSV files
@@ -45,4 +45,4 @@ python scripts/draw_RL_length_change/plot_wandb_curves.py \
 ```
 
 The script plots `Performance`, `Entropy`, and `Output Length` against `step`.
-By default, figures are saved under [figure](./scripts/draw_RL_length_change/figure)/`<project_name>/`.
+By default, figures are saved under `figure/<project_name>/`.

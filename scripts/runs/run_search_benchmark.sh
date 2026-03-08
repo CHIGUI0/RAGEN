@@ -314,12 +314,12 @@ run_experiment() {
     algo_overrides=$(get_algo_overrides "$algo")
     read -r -a algo_args <<< "$algo_overrides"
 
-    local name="search-${algo}-${filter}-${model_name}"
-    local log_path="${LOG_DIR}/${name}.log"
-    local checkpoint_dir="${CHECKPOINT_ROOT}/${model_name}/${algo}/${filter}/${name}"
     local gpus_per_exp
     IFS=',' read -r -a gpu_ids <<< "$gpu_list"
     gpus_per_exp=${#gpu_ids[@]}
+    local name="search-${algo}-${filter}-${model_name}-${gpus_per_exp}gpu"
+    local log_path="${LOG_DIR}/${name}.log"
+    local checkpoint_dir="${CHECKPOINT_ROOT}/${model_name}/${algo}/${filter}/${name}"
 
     # Limit Ray CPU workers to avoid spawning hundreds of idle workers (default: 8 per GPU)
     local ray_num_cpus=$((gpus_per_exp * 8))
@@ -335,7 +335,7 @@ run_experiment() {
         trainer.save_freq="${SAVE_FREQ}" \
         trainer.default_local_dir="${checkpoint_dir}" \
         trainer.logger="['console','wandb']" \
-        trainer.val_before_train=True \
+        trainer.val_before_train=False \
         trainer.n_gpus_per_node="${gpus_per_exp}" \
         system.CUDA_VISIBLE_DEVICES="'${gpu_list}'" \
         actor_rollout_ref.rollout.rollout_filter_strategy="${filter_strategy}" \

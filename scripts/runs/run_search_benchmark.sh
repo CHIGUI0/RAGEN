@@ -335,7 +335,7 @@ run_experiment() {
         trainer.save_freq="${SAVE_FREQ}" \
         trainer.default_local_dir="${checkpoint_dir}" \
         trainer.logger="['console','wandb']" \
-        trainer.val_before_train=False \
+        trainer.val_before_train=True \
         trainer.n_gpus_per_node="${gpus_per_exp}" \
         system.CUDA_VISIBLE_DEVICES="'${gpu_list}'" \
         actor_rollout_ref.rollout.rollout_filter_strategy="${filter_strategy}" \

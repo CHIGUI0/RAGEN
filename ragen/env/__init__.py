@@ -24,6 +24,7 @@ REGISTERED_ENVS = {
     'metamathqa': MetaMathQAEnv,
     'deepcoder': DeepCoderEnv,
     'lean': LeanEnv,
+    'deepcoder': DeepCoderEnv,
     'sudoku': SudokuEnv,
 }
 

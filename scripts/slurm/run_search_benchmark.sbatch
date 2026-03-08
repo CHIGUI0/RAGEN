@@ -168,7 +168,7 @@ mkdir -p "$HF_DATASETS_CACHE"
 # === Step 4: Run single experiment ===
 echo "=== Step 4: Running ${EXP_NAME} ==="
 bash scripts/runs/run_search_benchmark.sh \
-    --steps 400 \
+    --steps 200 \
     --models "$MODEL" \
     --algos "$ALGO" \
     --filters "$FILTER" \

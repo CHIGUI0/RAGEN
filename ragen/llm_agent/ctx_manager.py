@@ -495,10 +495,28 @@ class ContextManager:
             token_len = len(self.tokenizer(full_text, add_special_tokens=False)["input_ids"])
 
         if token_len > max_length:
-            logging.warning(
-                f"Cannot truncate to {max_length} tokens (current: {token_len}). "
-                "Single turn may exceed max length."
-            )
+            # Last resort: truncate the content of the last user message at token level
+            # to fit within max_length, preserving the chat template structure.
+            for i in range(len(conversation) - 1, -1, -1):
+                if conversation[i]["role"] == "user":
+                    user_content = conversation[i]["content"]
+                    user_tokens = self.tokenizer(user_content, add_special_tokens=False)["input_ids"]
+                    overflow = token_len - max_length
+                    if len(user_tokens) > overflow:
+                        truncated_tokens = user_tokens[:len(user_tokens) - overflow]
+                        conversation[i]["content"] = self.tokenizer.decode(
+                            truncated_tokens, skip_special_tokens=False
+                        )
+                        logging.warning(
+                            f"Truncated last user message by {overflow} tokens "
+                            f"to fit max_model_len={max_length}."
+                        )
+                    else:
+                        logging.warning(
+                            f"Cannot truncate to {max_length} tokens (current: {token_len}). "
+                            "Single turn may exceed max length."
+                        )
+                    break
 
         return [system_msg] + conversation
 

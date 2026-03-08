@@ -61,7 +61,7 @@ bash scripts/runs/run_webshop_small_combos.sh --steps 200 --gpus 6 --filters nof
 | `--filters LIST` | all | filter, nofilter, or all |
 | `--save-freq N` | 200 | Checkpoint save frequency |
 | `--cooldown N` | 30 | Seconds between runs on same GPU slot |
-| `--gpu-memory-utilization V` | 0.2 | vLLM rollout GPU memory fraction |
+| `--gpu-memory-utilization V` | 0.3 | vLLM rollout GPU memory fraction |
 
 ## Output
 

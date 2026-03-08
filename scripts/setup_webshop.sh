@@ -59,6 +59,11 @@ ensure_conda_env() {
 
 ensure_conda_env
 
+# `pkg_resources` is provided by setuptools. Reinstall the packaging toolchain
+# here because this script must work after either base setup path.
+print_step "Ensuring packaging toolchain is available..."
+pip install -U pip "setuptools<70.0.0" wheel
+
 CONSTRAINTS_FILE=$(build_constraints_file)
 cleanup() {
     rm -f "${CONSTRAINTS_FILE}"

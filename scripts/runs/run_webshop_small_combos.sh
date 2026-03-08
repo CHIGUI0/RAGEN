@@ -25,7 +25,7 @@ GPUS=()
 GPUS_PROVIDED=false
 GPUS_PER_EXP=1
 COOLDOWN_SECONDS=30
-GPU_MEMORY_UTILIZATION=0.2
+GPU_MEMORY_UTILIZATION=0.3
 declare -A GPU_LABELS
 
 usage() {
@@ -35,7 +35,7 @@ usage() {
     echo "  --gpus LIST           Comma-separated GPU IDs (default: auto-detect)"
     echo "  --gpus-per-exp N      GPUs per experiment (default: 1)"
     echo "  --cooldown SECONDS    Cooldown between runs on the same GPU group (default: 30)"
-    echo "  --gpu-memory-utilization V  Rollout gpu_memory_utilization (default: 0.2)"
+    echo "  --gpu-memory-utilization V  Rollout gpu_memory_utilization (default: 0.3)"
     echo "  --save-freq N         Checkpoint save frequency (default: -1 to disable saving)"
     echo "  --filters LIST        Comma-separated filter modes (filter,nofilter,all). Default: all"
     echo "  --combos LIST         Comma-separated 1-based combo indices to run (e.g., 2,3,4). Default: all"

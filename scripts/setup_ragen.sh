@@ -35,6 +35,30 @@ print_step() {
     echo -e "${BLUE}[Step] ${1}${NC}"
 }
 
+install_cuda_toolkit() {
+    local attempts=3
+    local delay=10
+
+    for ((attempt=1; attempt<=attempts; attempt++)); do
+        if conda install -c "nvidia/label/cuda-12.4.0" cuda-toolkit -y; then
+            export CUDA_HOME=$CONDA_PREFIX
+            return 0
+        fi
+
+        if [ "$attempt" -lt "$attempts" ]; then
+            echo "CUDA toolkit install failed (attempt ${attempt}/${attempts}). Retrying in ${delay}s..."
+            sleep "$delay"
+        fi
+    done
+
+    return 1
+}
+
+install_flash_attn() {
+    print_step "Installing flash-attention..."
+    pip3 install flash-attn==2.7.4.post1 --no-build-isolation
+}
+
 # Main installation process
 main() {
     # Check prerequisites
@@ -76,6 +100,7 @@ main() {
     # Install PyTorch with CUDA if available
     if check_cuda; then
         print_step "CUDA detected, checking CUDA version..."
+        need_cuda_toolkit=false
 
         if command -v nvcc &> /dev/null; then
             nvcc_version=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2-)
@@ -88,21 +113,26 @@ main() {
                 print_step "CUDA $nvcc_version is already installed and meets requirements (>=12.4)"
                 export CUDA_HOME=${CUDA_HOME:-$(dirname $(dirname $(which nvcc)))}
             else
-                print_step "CUDA version < 12.4, installing CUDA toolkit 12.4..."
-                conda install -c "nvidia/label/cuda-12.4.0" cuda-toolkit -y
-                export CUDA_HOME=$CONDA_PREFIX
+                print_step "CUDA version < 12.4; will fall back to conda toolkit only if flash-attn needs it."
+                need_cuda_toolkit=true
             fi
         else
-            print_step "NVCC not found, installing CUDA toolkit 12.4..."
-            conda install -c "nvidia/label/cuda-12.4.0" cuda-toolkit -y
-            export CUDA_HOME=$CONDA_PREFIX
+            print_step "NVCC not found; will try flash-attn first and only install CUDA toolkit if needed."
+            need_cuda_toolkit=true
         fi
 
         print_step "Installing PyTorch with CUDA support..."
         pip install torch==2.5.0 --index-url https://download.pytorch.org/whl/cu124
 
-        print_step "Installing flash-attention..."
-        pip3 install flash-attn==2.7.4.post1 --no-build-isolation
+        if ! install_flash_attn; then
+            if [ "$need_cuda_toolkit" = true ]; then
+                print_step "flash-attn install failed; installing CUDA toolkit 12.4 with retries..."
+                install_cuda_toolkit
+                install_flash_attn
+            else
+                return 1
+            fi
+        fi
     else
         print_step "Installing PyTorch without CUDA support..."
         pip install torch==2.5.0

@@ -15,7 +15,7 @@ RENDER_INSTRUCTIONS = [
     "Never search for more than 2 times.",
     "Do not be too strict about the description, it's more important to buy one that is close enough within action limit.",
     "Prioritize click a product in the current page over going to next page.",
-    "Almost never click[next >] for more than 2 times."
+    "Almost never click[next >] for more than 2 times.",
     "Almost never click[< prev] unless you are sure the product is on one of the previous pages.",
     "If you have less than 3 actions left, just buy the first product you see in the current page.",
     "If an matching option exists, make sure to click[size] then click[color], one at a time, before click[buy now], but don't have to if only 1 action left, in that case you just click[buy now]. Never click description."

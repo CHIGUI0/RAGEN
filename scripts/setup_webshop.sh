@@ -16,6 +16,35 @@ print_step() {
     echo -e "${BLUE}[Step] ${1}${NC}"
 }
 
+build_constraints_file() {
+    local constraints_file
+    constraints_file=$(mktemp -t ragen_webshop_constraints.XXXXXX)
+    python - "$constraints_file" <<'PY'
+from importlib import metadata
+from pathlib import Path
+import sys
+
+protected = [
+    "torch",
+    "transformers",
+    "vllm",
+    "flash-attn",
+    "tokenizers",
+]
+
+lines = []
+for package in protected:
+    try:
+        version = metadata.version(package)
+    except metadata.PackageNotFoundError:
+        continue
+    lines.append(f"{package}=={version}")
+
+Path(sys.argv[1]).write_text("\n".join(lines) + ("\n" if lines else ""))
+PY
+    echo "$constraints_file"
+}
+
 ensure_conda_env() {
     if ! command -v conda &> /dev/null; then
         echo "Conda is not installed. Please install Conda first."
@@ -30,6 +59,12 @@ ensure_conda_env() {
 
 ensure_conda_env
 
+CONSTRAINTS_FILE=$(build_constraints_file)
+cleanup() {
+    rm -f "${CONSTRAINTS_FILE}"
+}
+trap cleanup EXIT
+
 # WebShop-specific system dependencies.
 print_step "Installing WebShop system dependencies..."
 sudo apt update
@@ -38,8 +73,9 @@ conda install -c conda-forge openjdk=21 maven -y
 
 # WebShop-only Python extras. Avoid reinstalling the full base requirements
 # because the B200 setup path intentionally manages those separately.
+# Use constraints so pip cannot silently upgrade fragile core packages.
 print_step "Installing WebShop Python dependencies..."
-pip install beautifulsoup4 cleantext flask html2text rank_bm25 pyserini thefuzz gdown spacy rich
+pip install -c "${CONSTRAINTS_FILE}" beautifulsoup4 cleantext flask html2text rank_bm25 pyserini thefuzz gdown spacy rich
 
 # WebShop package and models.
 print_step "Installing WebShop package..."

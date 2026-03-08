@@ -419,6 +419,8 @@ class RewardRolloutFilter(RolloutFilter):
             }
         )
 
+        metrics["rollout/_reward_matrix"] = rm_scores.detach().cpu()
+
         if self.strategy == "top_p" and self.config.value >= 1 and self.config.include_zero:
             return batch, metrics
 

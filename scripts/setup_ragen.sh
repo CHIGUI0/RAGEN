@@ -126,41 +126,10 @@ main() {
 
     echo -e "${GREEN}Installation completed successfully!${NC}"
     echo "To activate the environment, run: conda activate ragen"
+    echo "To install WebShop separately, run: bash scripts/setup_webshop.sh"
 
     # export CMAKE_POLICY_VERSION_MINIMUM=3.5 && pip install alfworld[full]
     # alfworld-download
-
-    # installing webshop
-    print_step "Installing webshop dependencies..."
-    sudo apt update
-    sudo apt install default-jdk -y
-    conda install -c conda-forge openjdk=21 maven -y
-
-    # Install remaining requirements
-    print_step "Installing additional requirements..."
-    pip install -r requirements.txt
-
-    # webshop installation, model loading
-    pip install -e external/webshop-minimal/ --no-dependencies
-    python -m spacy download en_core_web_sm
-    python -m spacy download en_core_web_lg
-
-    print_step "Downloading data..."
-    python scripts/download_data.py
-
-    # Optional: download full data set
-    print_step "Downloading full data set..."
-    conda install conda-forge::gdown -y
-    mkdir -p external/webshop-minimal/webshop_minimal/data/full
-    cd external/webshop-minimal/webshop_minimal/data/full
-    gdown https://drive.google.com/uc?id=1A2whVgOO0euk5O13n2iYDM0bQRkkRduB # items_shuffle
-    gdown https://drive.google.com/uc?id=1s2j6NgHljiZzQNL3veZaAiyW_qDEgBNi # items_ins_v2
-    cd ../../../../..
-
-    echo -e "${GREEN}Installation completed successfully!${NC}"
-    echo "To activate the environment, run: conda activate ragen"
-
-
 }
 
 # Run main installation

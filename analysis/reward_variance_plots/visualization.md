@@ -7,26 +7,54 @@ To better understand the variance and selection across groups during training pr
 - **The Intensity (Red)** indicates the raw Reward value.
 - **The Blue Line** separates the "Kept" groups (top) from the "Dropped" groups (bottom) based on the linear `0.9` top-p threshold evaluated using standard deviations.
 
-*Note: If viewing on GitHub, scroll down to see the images sequentially. If viewing in an editor that supports the `carousel` markdown extension, you can click through them interactively.*
+*Note: Since GitHub does not natively support animated carousels, these are formatted as collapsible sections for easy sequential viewing.*
 
-````carousel
-![Reward Heatmap Step 0](plots/reward_heatmap_step_0.png)
-<!-- slide -->
-![Reward Heatmap Step 10](plots/reward_heatmap_step_10.png)
-<!-- slide -->
-![Reward Heatmap Step 20](plots/reward_heatmap_step_20.png)
-<!-- slide -->
-![Reward Heatmap Step 30](plots/reward_heatmap_step_30.png)
-<!-- slide -->
-![Reward Heatmap Step 40](plots/reward_heatmap_step_40.png)
-<!-- slide -->
-![Reward Heatmap Step 50](plots/reward_heatmap_step_50.png)
-<!-- slide -->
-![Reward Heatmap Step 60](plots/reward_heatmap_step_60.png)
-<!-- slide -->
-![Reward Heatmap Step 70](plots/reward_heatmap_step_70.png)
-<!-- slide -->
-![Reward Heatmap Step 80](plots/reward_heatmap_step_80.png)
-<!-- slide -->
-![Reward Heatmap Step 90](plots/reward_heatmap_step_90.png)
-````
+<details open>
+  <summary><b>Step 0</b></summary>
+  <img src="plots/reward_heatmap_step_0.png" alt="Reward Heatmap Step 0" width="800">
+</details>
+
+<details>
+  <summary><b>Step 10</b></summary>
+  <img src="plots/reward_heatmap_step_10.png" alt="Reward Heatmap Step 10" width="800">
+</details>
+
+<details>
+  <summary><b>Step 20</b></summary>
+  <img src="plots/reward_heatmap_step_20.png" alt="Reward Heatmap Step 20" width="800">
+</details>
+
+<details>
+  <summary><b>Step 30</b></summary>
+  <img src="plots/reward_heatmap_step_30.png" alt="Reward Heatmap Step 30" width="800">
+</details>
+
+<details>
+  <summary><b>Step 40</b></summary>
+  <img src="plots/reward_heatmap_step_40.png" alt="Reward Heatmap Step 40" width="800">
+</details>
+
+<details>
+  <summary><b>Step 50</b></summary>
+  <img src="plots/reward_heatmap_step_50.png" alt="Reward Heatmap Step 50" width="800">
+</details>
+
+<details>
+  <summary><b>Step 60</b></summary>
+  <img src="plots/reward_heatmap_step_60.png" alt="Reward Heatmap Step 60" width="800">
+</details>
+
+<details>
+  <summary><b>Step 70</b></summary>
+  <img src="plots/reward_heatmap_step_70.png" alt="Reward Heatmap Step 70" width="800">
+</details>
+
+<details>
+  <summary><b>Step 80</b></summary>
+  <img src="plots/reward_heatmap_step_80.png" alt="Reward Heatmap Step 80" width="800">
+</details>
+
+<details>
+  <summary><b>Step 90</b></summary>
+  <img src="plots/reward_heatmap_step_90.png" alt="Reward Heatmap Step 90" width="800">
+</details>

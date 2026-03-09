@@ -24,7 +24,7 @@ class RolloutFilterConfig:
     strategy: str = "top_p"
     top_p_prob_mode: str = "linear"
     selection_eps: float = 0.01
-    bucket_count: int = 4
+    bucket_count: int = 6
     bucket_mode: str = "quantile"
 
 
@@ -744,7 +744,7 @@ def build_rollout_filter(
     strategy: str = "top_p",
     top_p_prob_mode: str = "linear",
     selection_eps: float = 0.01,
-    bucket_count: int = 4,
+    bucket_count: int = 6,
     bucket_mode: str = "quantile",
 ) -> RolloutFilter:
     metric = (metric or "reward_variance").lower()

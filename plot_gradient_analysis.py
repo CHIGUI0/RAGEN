@@ -1,12 +1,11 @@
-import wandb
-import matplotlib.pyplot as plt
-import os
-import json
 import argparse
 import csv
+import json
+import os
 
-# CONFIGURATION
-WANDB_PATH = "deimos-xing/AGEN_gradient_analysis/opinzice"
+import matplotlib.pyplot as plt
+import wandb
+
 DEFAULT_BUCKETS = [
     "bucket_1",
     "bucket_2",
@@ -14,8 +13,6 @@ DEFAULT_BUCKETS = [
     "bucket_4",
     "bucket_5",
     "bucket_6",
-    "bucket_7",
-    "bucket_8",
 ]
 COMPONENTS = ["kl", "entropy", "task"]
 LOSS_COMPONENTS = ["policy", "entropy", "kl", "total"]
@@ -54,8 +51,13 @@ def main():
     parser = argparse.ArgumentParser(description="Plot gradient analysis metrics from a W&B run.")
     parser.add_argument(
         "--wandb-path",
-        default=WANDB_PATH,
+        required=True,
         help="W&B run path like entity/project/run_id",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Directory for generated plots and exported metrics. Defaults to gradient_analysis_<run_name>_<run_id>.",
     )
     args = parser.parse_args()
 
@@ -94,7 +96,7 @@ def main():
         step_metrics = {"summary": summary}
 
     default_dir = f"gradient_analysis_{_sanitize_dir_name(run.name)}_{run.id}"
-    output_dir = os.environ.get("PLOT_OUTPUT_DIR", default_dir)
+    output_dir = args.output_dir or default_dir
     os.makedirs(output_dir, exist_ok=True)
     titles = {
         "kl": "KL Gradient Norm",

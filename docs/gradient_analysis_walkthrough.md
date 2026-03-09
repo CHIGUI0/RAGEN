@@ -10,7 +10,7 @@ The feature allows for disaggregated gradient analysis across reward-variance **
 ### 1. Bucket Selection
 In `RewardRolloutFilter.split_into_buckets`:
 - **Buckets**:
-  - **Quantile mode (default)**: `gradient_analysis_num_buckets` (default: 8) over **groups**, sorted by group-level `reward_std`.
+- **Quantile mode (default)**: `gradient_analysis_num_buckets` (default: 6) over **groups**, sorted by group-level `reward_std`.
   - **Fixed-RV mode**: `gradient_analysis_bucket_mode=fixed_rv` with fixed gaps `[0,1), [1,2), [2,3), [3,4), [4,5), [5,+inf)`, yielding 6 buckets.
 - **Bucket names**: `bucket_1` ... `bucket_N`, ordered low → high reward variance.
 - Uses the `reward_std` computed during rollout filtering.
@@ -50,8 +50,6 @@ In `ragen/trainer/gradient_reporter.py`:
 ### 5. FSDP & Environment Compatibility
 In `fsdp_workers.py`:
 - Uses the local actor implementation (`ragen.workers.actor.dp_actor.DataParallelPPOActor`) to enable component-wise gradient analysis **without modifying the verl submodule**.
-- **TRL Bypass**: Implemented manual model loading and head attachment to avoid version conflicts with Qwen models.
-- **Attention Backend**: Hardcoded `eager` implementation to resolve missing `flash_attn` dependencies in the current environment.
 
 ## Usage
 Run the analysis using the following flags:
@@ -59,7 +57,7 @@ Run the analysis using the following flags:
 python3 train.py ... +trainer.gradient_analysis_mode=True +trainer.gradient_analysis_every=10
 ```
 Optional flags:
-- `+actor_rollout_ref.rollout.gradient_analysis_num_buckets=8`
+- `+actor_rollout_ref.rollout.gradient_analysis_num_buckets=6`
 - `+actor_rollout_ref.rollout.gradient_analysis_bucket_mode=quantile|fixed_rv`
 
 `gradient_analysis_every` controls the reporting cadence (default: off). Reporting runs on steps where `(global_steps - 1) % gradient_analysis_every == 0` (i.e., it triggers at step 1).
@@ -75,7 +73,3 @@ Component metrics are logged per bucket:
 - `grad_norm/<bucket>/reward_std_mean`
 - `grad_norm/<bucket>/reward_std_min`
 - `grad_norm/<bucket>/reward_std_max`
-
----
-**Date**: 2026-01-27
-**Implementation Status**: Merged and Verified.

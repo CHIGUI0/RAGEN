@@ -474,7 +474,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
             strategy=getattr(rollout_cfg, "rollout_filter_strategy", "top_p"),
             top_p_prob_mode=getattr(rollout_cfg, "rollout_filter_top_p_prob_mode", "linear"),
             selection_eps=getattr(rollout_cfg, "rollout_filter_selection_eps", 0.01),
-            bucket_count=getattr(rollout_cfg, "gradient_analysis_num_buckets", 8),
+            bucket_count=getattr(rollout_cfg, "gradient_analysis_num_buckets", 6),
             bucket_mode=getattr(rollout_cfg, "gradient_analysis_bucket_mode", "quantile"),
         )
 

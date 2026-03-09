@@ -3,16 +3,21 @@
 # Launch script for the dense-only retrieval server.
 #
 # Usage:
-#     bash launch_server.sh [data_dir] [port]
+#     bash launch_server.sh [data_dir] [port] [device]
 #
+# Examples:
+#     bash launch_server.sh ./search_data/prebuilt_indices 8000        # CPU (default)
+#     bash launch_server.sh ./search_data/prebuilt_indices 8000 cuda   # GPU
 
 # Default values
 DATA_DIR=${1:-"./search_data/prebuilt_indices"}
 PORT=${2:-8000}
+DEVICE=${3:-"cpu"}
 
 echo "Starting dense-only retrieval server..."
 echo "Data directory: $DATA_DIR"
 echo "Port: $PORT"
+echo "Device: $DEVICE"
 
 # Check if data directory exists
 if [ ! -d "$DATA_DIR" ]; then
@@ -34,6 +39,6 @@ done
 
 # Start server
 echo "Launching dense-only server..."
-python retrieval/server.py --data_dir "$DATA_DIR" --port "$PORT" --host 0.0.0.0
+python retrieval/server.py --data_dir "$DATA_DIR" --port "$PORT" --host 0.0.0.0 --device "$DEVICE"
 
 echo "Server stopped." 

@@ -20,11 +20,12 @@ from sentence_transformers import SentenceTransformer
 class LocalRetriever:
     """Dense-only retrieval system using FAISS."""
 
-    def __init__(self, data_dir: str):
+    def __init__(self, data_dir: str, device: str = "cpu"):
         self.data_dir = Path(data_dir)
         self.corpus = []
         self.dense_index = None
-        self.encoder = SentenceTransformer("intfloat/e5-base-v2")
+        self.encoder = SentenceTransformer("intfloat/e5-base-v2", device=device)
+        print(f"SentenceTransformer loaded on device: {device}")
 
         self._load_data()
 
@@ -88,6 +89,7 @@ def main():
     parser.add_argument("--data_dir", default="./search_data/prebuilt_indices", help="Directory containing corpus and dense index")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
+    parser.add_argument("--device", default="cpu", help="Device for SentenceTransformer encoder (cpu, cuda, cuda:0, etc.)")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 
     args = parser.parse_args()
@@ -95,7 +97,7 @@ def main():
     # Initialize retriever
     global retriever
     try:
-        retriever = LocalRetriever(args.data_dir)
+        retriever = LocalRetriever(args.data_dir, device=args.device)
         print(f"Dense retrieval server initialized with {len(retriever.corpus)} documents")
     except Exception as e:
         print(f"Failed to initialize retriever: {e}")

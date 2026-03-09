@@ -18,7 +18,7 @@ STEPS=200
 MODEL_NAMES=("Qwen2.5-3B-Instruct")
 ALGORITHMS=("PPO")
 SAVE_FREQ=-1
-FILTER_MODES=("filter" "nofilter")
+FILTER_MODES=("filter" "nofilter" "topk")
 FILTERS_OPTION="all"
 SELECTED_FILTERS=("${FILTER_MODES[@]}")
 
@@ -271,13 +271,21 @@ run_experiment() {
     local model_path
     model_path=$(get_model_path "$model_name")
 
-    local filter_value
-    if [ "$filter" = "filter" ]; then
-        filter_value=0.9
-    else
-        filter_value=1.0
-    fi
-    local filter_strategy="top_p"
+    local filter_value filter_strategy
+    case "$filter" in
+        filter)
+            filter_strategy="top_p"
+            filter_value=0.9
+            ;;
+        topk)
+            filter_strategy="top_k"
+            filter_value=0.25
+            ;;
+        *)
+            filter_strategy="top_p"
+            filter_value=1.0
+            ;;
+    esac
 
     local common_overrides=(
         "actor_rollout_ref.actor.use_kl_loss=False"
@@ -415,7 +423,7 @@ resolve_filter_selection() {
     for candidate in "${candidates[@]}"; do
         candidate="${candidate// /}"
         case "$candidate" in
-            filter|nofilter)
+            filter|nofilter|topk)
                 SELECTED_FILTERS+=("$candidate")
                 ;;
             "")

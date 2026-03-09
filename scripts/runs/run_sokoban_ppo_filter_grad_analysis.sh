@@ -32,7 +32,7 @@ ALGO="PPO"
 FILTER_LABEL="filter"
 FILTER_VALUE="0.9"
 GROUP_SIZE=16
-ENV_GROUPS=8
+ENV_GROUPS=32
 CONFIG_NAME="_2_sokoban"
 
 usage() {
@@ -92,7 +92,7 @@ if [ "$NUM_GPUS" -lt 1 ]; then
     exit 1
 fi
 
-EXP_NAME="${TASK}-${ALGO}-${FILTER_LABEL}-topp09-${MODEL_NAME}-grad-step1"
+EXP_NAME="${TASK}-${ALGO}-${FILTER_LABEL}-topp09-${MODEL_NAME}-${ENV_GROUPS}x${GROUP_SIZE}-grad-step1"
 LOG_DIR="logs/gradient_analysis_${TASK}_${MODEL_NAME}"
 CHECKPOINT_DIR="model_saving/gradient_analysis/${TASK}/${ALGO}/${FILTER_LABEL}/${EXP_NAME}"
 LOG_PATH="${LOG_DIR}/${EXP_NAME}.log"

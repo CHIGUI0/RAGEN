@@ -25,7 +25,7 @@ set -euo pipefail
 # Validate required env vars
 : "${MODEL:?ERROR: MODEL env var is required (e.g. Qwen2.5-3B-Instruct)}"
 : "${ALGO:?ERROR: ALGO env var is required (PPO or GRPO)}"
-: "${FILTER:?ERROR: FILTER env var is required (filter or nofilter)}"
+: "${FILTER:?ERROR: FILTER env var is required (filter, nofilter, or topk)}"
 
 EXP_NAME="search-${ALGO}-${FILTER}-${MODEL}"
 

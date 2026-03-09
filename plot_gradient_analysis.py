@@ -16,7 +16,6 @@ DEFAULT_BUCKETS = [
 ]
 COMPONENTS = ["kl", "entropy", "task"]
 LOSS_COMPONENTS = ["policy", "entropy", "kl", "total"]
-DEFAULT_OUTPUT_DIR = "gradient_plots"
 
 def _sanitize_dir_name(name: str) -> str:
     return "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in name)
@@ -39,7 +38,6 @@ def _extract_buckets(metric_source: dict) -> list[str]:
     if not buckets:
         return DEFAULT_BUCKETS
     return sorted(buckets, key=_bucket_sort_key)
-TARGET_STEPS = "all"  # "all", list like [1, 11], or None to auto-pick lowest step with bucket data
 
 def get_bucket_label(bucket_name):
     """Formats bucket names for the plot axis."""
@@ -48,7 +46,18 @@ def get_bucket_label(bucket_name):
     return bucket_name
 
 def main():
-    parser = argparse.ArgumentParser(description="Plot gradient analysis metrics from a W&B run.")
+    parser = argparse.ArgumentParser(
+        description="Plot gradient-analysis metrics from a W&B run.",
+        epilog=(
+            "Examples:\n"
+            "  python plot_gradient_analysis.py --wandb-path entity/project/run_id\n"
+            "  python plot_gradient_analysis.py --wandb-path entity/project/run_id --step 1\n"
+            "  python plot_gradient_analysis.py --wandb-path entity/project/run_id "
+            "--output-dir gradient_analysis_outputs/my_run\n"
+            "  python plot_gradient_analysis.py --wandb-path entity/project/run_id --list-steps"
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.add_argument(
         "--wandb-path",
         required=True,
@@ -57,7 +66,23 @@ def main():
     parser.add_argument(
         "--output-dir",
         default=None,
-        help="Directory for generated plots and exported metrics. Defaults to gradient_analysis_<run_name>_<run_id>.",
+        help=(
+            "Directory for generated plots and exported metrics. "
+            "Defaults to gradient_analysis_outputs/<run_name>_<run_id>."
+        ),
+    )
+    parser.add_argument(
+        "--step",
+        dest="steps",
+        type=int,
+        nargs="+",
+        default=None,
+        help="One or more training steps to plot. Default: all available gradient-analysis steps.",
+    )
+    parser.add_argument(
+        "--list-steps",
+        action="store_true",
+        help="List available gradient-analysis steps in the run and exit.",
     )
     args = parser.parse_args()
 
@@ -95,7 +120,19 @@ def main():
         print("Warning: no grad_norm metrics found in history; falling back to run summary.")
         step_metrics = {"summary": summary}
 
-    default_dir = f"gradient_analysis_{_sanitize_dir_name(run.name)}_{run.id}"
+    if args.list_steps:
+        if available_steps:
+            print("Available gradient-analysis steps:")
+            for step in sorted(available_steps):
+                print(step)
+        else:
+            print("No gradient-analysis steps found.")
+        return
+
+    default_dir = os.path.join(
+        "gradient_analysis_outputs",
+        f"{_sanitize_dir_name(run.name)}_{run.id}",
+    )
     output_dir = args.output_dir or default_dir
     os.makedirs(output_dir, exist_ok=True)
     titles = {
@@ -119,12 +156,12 @@ def main():
     }
 
     steps_to_plot = sorted(step_metrics.keys(), key=lambda x: (isinstance(x, str), x))
-    if TARGET_STEPS == "all":
-        pass
-    elif TARGET_STEPS:
-        steps_to_plot = [s for s in steps_to_plot if s in TARGET_STEPS]
-    elif steps_to_plot and steps_to_plot[0] != "summary":
-        steps_to_plot = [steps_to_plot[0]]
+    if args.steps is not None:
+        requested_steps = set(args.steps)
+        steps_to_plot = [s for s in steps_to_plot if s in requested_steps]
+        if not steps_to_plot:
+            print(f"Error: none of the requested steps {sorted(requested_steps)} were found.")
+            return
 
     for step_key in steps_to_plot:
         metric_source = step_metrics[step_key]
@@ -393,6 +430,8 @@ def main():
         plt.savefig(output_file_summary, bbox_inches="tight", dpi=300)
         print(f"Success! Summary visualization saved to: {os.path.abspath(output_file_summary)}")
         plt.close(fig5)
+
+    print(f"All outputs written to: {os.path.abspath(output_dir)}")
 
 
 if __name__ == "__main__":

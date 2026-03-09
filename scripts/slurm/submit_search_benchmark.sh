@@ -35,10 +35,10 @@ for exp in "${EXPERIMENTS[@]}"; do
     IFS='|' read -r model algo filter <<< "$exp"
     job_name="search-${algo}-${filter}-${model}"
 
-    # 7B models need 2 GPUs for tensor parallelism
+    # +1 GPU for retrieval server (GPU 0), rest for training
     case "$model" in
-        *7B*) gpu_override="--gpus=2" ;;
-        *)    gpu_override="" ;;
+        *7B*) gpu_override="--gpus=3" ;;   # 1 retrieval + 2 training
+        *)    gpu_override="--gpus=2" ;;    # 1 retrieval + 1 training
     esac
 
     cmd="sbatch ${gpu_override} --job-name=${job_name} --export=ALL,MODEL=${model},ALGO=${algo},FILTER=${filter} ${SBATCH_SCRIPT}"

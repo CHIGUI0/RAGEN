@@ -3,7 +3,7 @@
 #SBATCH --partition=gpuH200x8
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus=1
+#SBATCH --gpus=2
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=240G
 #SBATCH --time=15:00:00
@@ -29,21 +29,23 @@ set -euo pipefail
 
 EXP_NAME="search-${ALGO}-${FILTER}-${MODEL}"
 
-# GPU/TP/micro_batch settings per model size
+# GPU layout: GPU 0 = retrieval server, remaining GPUs = training
+# Total GPUs requested via sbatch --gpus must account for this
 case "$MODEL" in
     *7B*)
         GPU_MEM_UTIL=0.4
-        NUM_GPUS=2
+        TRAIN_GPUS=2       # GPUs for training
         TP_SIZE=2
         MICRO_BATCH=1
         ;;
     *)
         GPU_MEM_UTIL=0.4
-        NUM_GPUS=1
+        TRAIN_GPUS=1        # GPUs for training
         TP_SIZE=1
         MICRO_BATCH=2
         ;;
 esac
+TOTAL_GPUS=$((1 + TRAIN_GPUS))  # +1 for retrieval server on GPU 0
 
 # Use unique port per job to avoid conflicts on shared nodes
 RETRIEVAL_PORT=$((8000 + SLURM_JOB_ID % 1000))
@@ -135,9 +137,12 @@ echo "=== Step 2: Preparing HotpotQA parquet data ==="
 python scripts/prepare_search_data.py
 echo "HotpotQA data preparation done."
 
-# === Step 3: Start retrieval server in background ===
-echo "=== Step 3: Starting retrieval server on port ${RETRIEVAL_PORT} ==="
-python scripts/retrieval/server.py --data_dir ./search_data/prebuilt_indices --port "$RETRIEVAL_PORT" --host 0.0.0.0 &
+# === Step 3: Start retrieval server on GPU 0 in background ===
+echo "=== Step 3: Starting retrieval server on GPU 0, port ${RETRIEVAL_PORT} ==="
+CUDA_VISIBLE_DEVICES=0 python scripts/retrieval/server.py \
+    --data_dir ./search_data/prebuilt_indices \
+    --port "$RETRIEVAL_PORT" --host 0.0.0.0 \
+    --device cuda &
 RETRIEVAL_PID=$!
 echo "Retrieval server started (PID=$RETRIEVAL_PID)"
 
@@ -165,14 +170,17 @@ export RETRIEVAL_SERVER_URL="http://127.0.0.1:${RETRIEVAL_PORT}"
 # Only redirect datasets cache, keep HF_HOME for auth tokens
 export HF_DATASETS_CACHE="/tmp/hf_datasets_cache_${SLURM_JOB_ID}"
 mkdir -p "$HF_DATASETS_CACHE"
-# === Step 4: Run single experiment ===
-echo "=== Step 4: Running ${EXP_NAME} ==="
+# === Step 4: Run training on GPUs 1..N (GPU 0 reserved for retrieval) ===
+# Build training GPU list: 1, 2, ..., TRAIN_GPUS
+TRAIN_GPU_LIST=$(seq -s, 1 "$TRAIN_GPUS")
+echo "=== Step 4: Running ${EXP_NAME} on GPUs ${TRAIN_GPU_LIST} (GPU 0 = retrieval) ==="
 bash scripts/runs/run_search_benchmark.sh \
     --steps 200 \
     --models "$MODEL" \
     --algos "$ALGO" \
     --filters "$FILTER" \
-    --gpus-per-exp "$NUM_GPUS" \
+    --gpus "${TRAIN_GPU_LIST}" \
+    --gpus-per-exp "$TRAIN_GPUS" \
     --tp "$TP_SIZE" \
     --gpu-memory-utilization "$GPU_MEM_UTIL" \
     --micro-batch "$MICRO_BATCH" \

@@ -1,9 +1,7 @@
 #!/bin/bash
-# Webshop (release): 4 model×algo combos with 3 release filter modes
-#   1) Qwen2.5-3B-Instruct   + PPO
-#   2) Qwen2.5-3B-Instruct   + GRPO
-#   3) Qwen2.5-7B-Instruct   + PPO
-#   4) Llama-3.2-3B-Instruct + PPO
+# Webshop (release): GRPO with 3 release filter modes
+# Model:
+#   - Qwen2.5-3B-Instruct
 # Filter modes:
 #   - topk25  => top_k, keep top 25% of groups
 #   - topp09  => top_p=0.9 with linear aggregation
@@ -13,12 +11,13 @@ set -euo pipefail
 
 # Defaults
 STEPS=100
-TASK="webshop"
+TASK="webshop-release"
 CONFIG="_6_webshop"
 SAVE_FREQ=100
 NUM_GROUPS=8
 GROUP_SIZE=16
-COMBOS_SELECTION=""
+MODEL_NAME="Qwen2.5-3B-Instruct"
+ALGO="GRPO"
 FILTER_MODES=("topk25" "topp09" "nofilter")
 FILTERS_OPTION="all"
 SELECTED_FILTERS=("${FILTER_MODES[@]}")
@@ -41,7 +40,6 @@ usage() {
     echo "  --gpu-memory-utilization V  Rollout gpu_memory_utilization (default: 0.3)"
     echo "  --save-freq N         Checkpoint save frequency (default: 100)"
     echo "  --filters LIST        Comma-separated filter modes (topk25,topp09,nofilter,all). Default: all"
-    echo "  --combos LIST         Comma-separated 1-based combo indices to run (e.g., 2,3,4). Default: all"
     echo "  -h, --help            Show this help"
     exit 0
 }
@@ -62,8 +60,6 @@ while [ $# -gt 0 ]; do
         --save-freq=*) SAVE_FREQ="${1#*=}"; shift ;;
         --filters) FILTERS_OPTION="$2"; shift 2 ;;
         --filters=*) FILTERS_OPTION="${1#*=}"; shift ;;
-        --combos) COMBOS_SELECTION="$2"; shift 2 ;;
-        --combos=*) COMBOS_SELECTION="${1#*=}"; shift ;;
         -h|--help) usage ;;
         *) echo "Unknown argument: $1"; usage ;;
     esac
@@ -83,7 +79,6 @@ get_model_path() {
     esac
 }
 
-# Algorithm overrides (from diff_algo script)
 get_algo_overrides() {
     case "$1" in
         PPO)
@@ -445,36 +440,9 @@ add_experiment() {
 
 resolve_filter_selection "$FILTERS_OPTION"
 
-# Define the 4 model/algo combos.
-ALL_COMBOS=(
-    "Qwen2.5-3B-Instruct|PPO"
-    "Qwen2.5-3B-Instruct|GRPO"
-    "Qwen2.5-7B-Instruct|PPO"
-    "Llama-3.2-3B-Instruct|PPO"
-)
-
-if [ -n "$COMBOS_SELECTION" ]; then
-    COMBOS=()
-    IFS=',' read -r -a combo_indices <<< "$COMBOS_SELECTION"
-    for ci in "${combo_indices[@]}"; do
-        idx=$((ci - 1))
-        if [ "$idx" -ge 0 ] && [ "$idx" -lt ${#ALL_COMBOS[@]} ]; then
-            COMBOS+=("${ALL_COMBOS[$idx]}")
-        else
-            echo "Invalid combo index: $ci (valid: 1-${#ALL_COMBOS[@]})" >&2
-            exit 1
-        fi
-    done
-else
-    COMBOS=("${ALL_COMBOS[@]}")
-fi
-
-for combo in "${COMBOS[@]}"; do
-    IFS='|' read -r model_name algo <<< "$combo"
-    set_group "${model_name} + ${algo}"
-    for filter in "${SELECTED_FILTERS[@]}"; do
-        add_experiment "$model_name" "$algo" "$filter"
-    done
+set_group "${MODEL_NAME} + ${ALGO}"
+for filter in "${SELECTED_FILTERS[@]}"; do
+    add_experiment "$MODEL_NAME" "$ALGO" "$filter"
 done
 
 QUEUE_FILE=$(mktemp -t ragen_webshop_small_queue.XXXXXX)

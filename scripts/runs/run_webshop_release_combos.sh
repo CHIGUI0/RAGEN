@@ -319,6 +319,7 @@ run_experiment() {
     CUDA_VISIBLE_DEVICES="${gpu_list}" python train.py --config-name "$config" \
         model_path="${model_path}" \
         micro_batch_size_per_gpu=1 \
+        log_prob_micro_batch_size_per_gpu=1 \
         agent_proxy.max_turn=9 \
         trainer.project_name="main_webshop" \
         trainer.total_training_steps="${STEPS}" \
@@ -330,6 +331,8 @@ run_experiment() {
         trainer.n_gpus_per_node="${gpus_per_exp}" \
         system.CUDA_VISIBLE_DEVICES="'${gpu_list}'" \
         actor_rollout_ref.rollout.rollout_filter_value="${filter_value}" \
+        actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1 \
+        actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1 \
         ppo_mini_batch_size=32 \
         es_manager.train.env_groups=${NUM_GROUPS} \
         es_manager.train.group_size=${GROUP_SIZE} \

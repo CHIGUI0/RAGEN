@@ -1,6 +1,6 @@
 #!/bin/bash
-# One-off runner for Sokoban PPO with top-p=0.9 filtering plus a single
-# gradient-analysis pass on the first training step.
+# Runner for Sokoban PPO with top-p=0.9 filtering plus periodic
+# gradient-analysis passes during training.
 #
 # This intentionally stays close to scripts/runs/run_main_table_diff_algo.sh:
 # - task: sokoban
@@ -14,11 +14,13 @@
 # - no periodic validation afterwards
 #
 # Gradient-analysis policy:
-# - exactly one gradient-analysis run on step 1
+# - run gradient analysis every 50 steps
+# - current trainer trigger is step 1, 51, 101, ...
+# - do not exit after the analysis step
 
 set -euo pipefail
 
-STEPS=400
+STEPS=101
 SAVE_FREQ=-1
 GPU_MEMORY_UTILIZATION=0.3
 RAY_NUM_CPUS=16
@@ -38,7 +40,7 @@ CONFIG_NAME="_2_sokoban"
 usage() {
     echo "Usage: $0 [options]"
     echo "Options:"
-    echo "  --steps N                    Training steps (default: 400)"
+    echo "  --steps N                    Training steps (default: 101)"
     echo "  --gpus LIST                  Comma-separated GPU IDs (default: auto-detect)"
     echo "  --gpu-memory-utilization V   Rollout gpu_memory_utilization (default: 0.3)"
     echo "  --ray-num-cpus N             Max CPUs for ray.init (default: 16)"
@@ -92,7 +94,7 @@ if [ "$NUM_GPUS" -lt 1 ]; then
     exit 1
 fi
 
-EXP_NAME="${TASK}-${ALGO}-${FILTER_LABEL}-topp09-${MODEL_NAME}-${ENV_GROUPS}x${GROUP_SIZE}-grad-step1"
+EXP_NAME="${TASK}-${ALGO}-${FILTER_LABEL}-topp09-${MODEL_NAME}-${ENV_GROUPS}x${GROUP_SIZE}-grad-every50"
 LOG_DIR="logs/gradient_analysis_${TASK}_${MODEL_NAME}"
 CHECKPOINT_DIR="model_saving/gradient_analysis/${TASK}/${ALGO}/${FILTER_LABEL}/${EXP_NAME}"
 LOG_PATH="${LOG_DIR}/${EXP_NAME}.log"
@@ -102,7 +104,7 @@ mkdir -p "$CHECKPOINT_DIR"
 
 echo "=== Gradient Analysis Runner: $(date) ===" | tee "$LOG_PATH"
 echo "task=${TASK} algo=${ALGO} filter=top_p:${FILTER_VALUE} model=${MODEL_NAME} steps=${STEPS} gpus=${GPU_LIST}" | tee -a "$LOG_PATH"
-echo "group_size=${GROUP_SIZE} env_groups=${ENV_GROUPS} gradient_analysis_every=1 exit_after_gradient_analysis=True" | tee -a "$LOG_PATH"
+echo "group_size=${GROUP_SIZE} env_groups=${ENV_GROUPS} gradient_analysis_every=50 exit_after_gradient_analysis=False" | tee -a "$LOG_PATH"
 
 CUDA_VISIBLE_DEVICES="${GPU_LIST}" python train.py --config-name "${CONFIG_NAME}" \
     model_path="${MODEL_PATH}" \
@@ -138,8 +140,8 @@ CUDA_VISIBLE_DEVICES="${GPU_LIST}" python train.py --config-name "${CONFIG_NAME}
     critic.checkpoint.save_contents=[model] \
     algorithm.adv_estimator=gae \
     trainer.gradient_analysis_mode=True \
-    trainer.gradient_analysis_every=1 \
-    trainer.exit_after_gradient_analysis=True \
+    trainer.gradient_analysis_every=50 \
+    trainer.exit_after_gradient_analysis=False \
     actor_rollout_ref.rollout.gradient_analysis_num_buckets=6 \
     actor_rollout_ref.rollout.gradient_analysis_bucket_mode=quantile \
     2>&1 | tee -a "$LOG_PATH"

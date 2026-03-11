@@ -92,14 +92,20 @@ python -m spacy download en_core_web_lg
 print_step "Downloading data..."
 python scripts/download_data.py
 
-# Optional: download full data set
-print_step "Downloading full data set..."
+# Optional: download full data set. Google Drive links are brittle and should
+# not fail the whole setup if they are rate-limited or permissions change.
+print_step "Downloading full data set (best effort)..."
 conda install -c conda-forge gdown -y
-mkdir -p external/webshop-minimal/webshop_minimal/data/full
-cd external/webshop-minimal/webshop_minimal/data/full
-gdown https://drive.google.com/uc?id=1A2whVgOO0euk5O13n2iYDM0bQRkkRduB # items_shuffle
-gdown https://drive.google.com/uc?id=1s2j6NgHljiZzQNL3veZaAiyW_qDEgBNi # items_ins_v2
-cd ../../../../..
+FULL_DATA_DIR="external/webshop-minimal/webshop_minimal/data/full"
+mkdir -p "${FULL_DATA_DIR}"
+pushd "${FULL_DATA_DIR}" >/dev/null
+if ! gdown https://drive.google.com/uc?id=1A2whVgOO0euk5O13n2iYDM0bQRkkRduB; then
+    echo "Warning: failed to download WebShop full dataset file 'items_shuffle'. Continuing without it."
+fi
+if ! gdown https://drive.google.com/uc?id=1s2j6NgHljiZzQNL3veZaAiyW_qDEgBNi; then
+    echo "Warning: failed to download WebShop full dataset file 'items_ins_v2'. Continuing without it."
+fi
+popd >/dev/null
 
 echo -e "${GREEN}Installation completed successfully!${NC}"
 echo "To activate the environment, run: conda activate ragen"

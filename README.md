@@ -129,6 +129,15 @@ bash scripts/setup_ragen.sh
 
 If this fails, you can follow the manual setup instructions in `scripts/setup_ragen.md`.
 
+For WebShop specifically:
+
+```bash
+bash scripts/setup_ragen.sh
+bash scripts/setup_webshop.sh
+```
+
+Use the original `setup_ragen.sh` path for WebShop. Do not rely on `setup_ragen_release.sh` for WebShop setup.
+
 ### Optional Dependencies
 
 RAGEN supports optional environment-specific dependencies. You can install only the components you need:

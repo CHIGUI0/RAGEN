@@ -127,16 +127,14 @@ For detailed setup instructions, please check our [documentation](https://ragen-
 bash scripts/setup_ragen.sh
 ```
 
-If this fails, you can follow the manual setup instructions in `scripts/setup_ragen.md`.
-
 For WebShop specifically:
 
 ```bash
-bash scripts/setup_ragen.sh
+bash scripts/setup_ragen_old.sh
 bash scripts/setup_webshop.sh
 ```
 
-Use the original `setup_ragen.sh` path for WebShop. Do not rely on `setup_ragen_release.sh` for WebShop setup.
+Use `setup_ragen_old.sh` for WebShop. Do not rely on `setup_ragen.sh` for WebShop setup.
 
 For WebShop training runs, use the release runner documented in [docs/experiment_webshop_release.md](docs/experiment_webshop_release.md). The recommended entrypoint is:
 

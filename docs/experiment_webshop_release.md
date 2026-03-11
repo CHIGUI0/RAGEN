@@ -34,11 +34,11 @@ All four modes use:
 For WebShop, use the original base setup path:
 
 ```bash
-bash scripts/setup_ragen.sh
+bash scripts/setup_ragen_old.sh
 bash scripts/setup_webshop.sh
 ```
 
-Do not use `setup_ragen_release.sh` as the primary WebShop setup path.
+Do not use `setup_ragen.sh` as the primary WebShop setup path.
 
 Notes:
 - `setup_webshop.sh` now treats the Google Drive full-data download as best-effort. A failure there does not mean the Python environment setup failed.

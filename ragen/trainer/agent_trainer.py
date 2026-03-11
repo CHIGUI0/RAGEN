@@ -676,39 +676,72 @@ class RayAgentTrainer(VerlRayPPOTrainer):
             log_prob_world_size=trainer_nnodes * trainer_n_gpus,
         )
 
-    def _build_separate_gradient_analysis_batch(self, metrics):
-        if self.gradient_analysis_proxy is None or self.gradient_analysis_rollout_filter is None:
-            return None
+    @staticmethod
+    def _to_python_scalar(value):
+        if torch.is_tensor(value):
+            return value.item()
+        if isinstance(value, np.generic):
+            return value.item()
+        return value
 
-        analysis_env_groups = int(self.gradient_analysis_config.es_manager.train.env_groups)
-        analysis_group_size = int(self.gradient_analysis_config.es_manager.train.group_size)
-        metrics["grad_analysis/source_env_groups"] = analysis_env_groups
-        metrics["grad_analysis/source_group_size"] = analysis_group_size
+    def _attach_group_reward_std(self, batch, reward_std_values, group_ids_for_metrics):
+        if reward_std_values is None or batch.batch is None:
+            return
 
-        batch = DataProto()
-        batch.meta_info = {"compute_collapse": False}
-        batch = self.gradient_analysis_proxy.rollout(batch, val=False)
-        raw_batch_size = batch.batch["input_ids"].shape[0]
-        metrics["grad_analysis/source_batch_size"] = raw_batch_size
+        device = batch.batch["input_ids"].device if "input_ids" in batch.batch.keys() else torch.device("cpu")
+        reward_std_values = torch.as_tensor(reward_std_values, dtype=torch.float32, device=device)
 
-        batch, filter_metrics = self.gradient_analysis_rollout_filter.filter(batch)
-        metrics["grad_analysis/empty_after_filter"] = float(len(batch) == 0)
-        for key, value in filter_metrics.items():
-            if key.startswith("rollout/_"):
-                continue
-            metrics[f"grad_analysis/{key.split('/', 1)[-1]}"] = value
+        if (
+            batch.non_tensor_batch is not None
+            and "group_ids" in batch.non_tensor_batch
+            and group_ids_for_metrics is not None
+        ):
+            batch_group_ids = batch.non_tensor_batch["group_ids"]
+            if torch.is_tensor(batch_group_ids):
+                batch_group_ids = batch_group_ids.detach().cpu().tolist()
+            else:
+                batch_group_ids = np.asarray(batch_group_ids).tolist()
 
-        if len(batch) == 0:
-            return batch
+            if torch.is_tensor(group_ids_for_metrics):
+                group_ids_for_metrics = group_ids_for_metrics.detach().cpu().tolist()
+            else:
+                group_ids_for_metrics = np.asarray(group_ids_for_metrics).tolist()
 
+            reward_std_map = {
+                self._to_python_scalar(group_id): reward_std_values[idx].item()
+                for idx, group_id in enumerate(group_ids_for_metrics)
+            }
+            sample_reward_std = [
+                reward_std_map[self._to_python_scalar(group_id)]
+                for group_id in batch_group_ids
+            ]
+            batch.batch["reward_std"] = torch.tensor(
+                sample_reward_std,
+                dtype=reward_std_values.dtype,
+                device=device,
+            )
+            return
+
+        group_size = (
+            int(self.gradient_analysis_config.es_manager.train.group_size)
+            if self.gradient_analysis_config is not None
+            else int(self.config.es_manager.train.group_size)
+        )
+        batch.batch["reward_std"] = reward_std_values.repeat_interleave(group_size)
+
+    def _prepare_gradient_analysis_batch(self, batch, source_env_groups, metrics=None, metrics_prefix=None):
         ppo_mini_batch_size = self.config.actor_rollout_ref.actor.ppo_mini_batch_size
         n_gpus = self.config.trainer.n_gpus_per_node
-        size_divisor = np.lcm.reduce([analysis_env_groups, ppo_mini_batch_size, n_gpus])
+        size_divisor = np.lcm.reduce([source_env_groups, ppo_mini_batch_size, n_gpus])
         adjust_mode = getattr(self.config.agent_proxy, "batch_adjust_mode", "copy")
         batch = adjust_batch(batch, size_divisor, mode=adjust_mode)
-        metrics["grad_analysis/adjusted_batch_size"] = batch.batch["input_ids"].shape[0]
+        if metrics is not None and metrics_prefix is not None:
+            metrics[f"{metrics_prefix}/adjusted_batch_size"] = batch.batch["input_ids"].shape[0]
 
-        batch.non_tensor_batch["uid"] = batch.non_tensor_batch["group_ids"]
+        batch.meta_info = dict(batch.meta_info or {})
+        batch.non_tensor_batch = batch.non_tensor_batch or {}
+        if "group_ids" in batch.non_tensor_batch:
+            batch.non_tensor_batch["uid"] = batch.non_tensor_batch["group_ids"]
         batch.batch["response_mask"] = batch.batch["loss_mask"]
 
         if self.config.trainer.balance_batch:
@@ -807,14 +840,73 @@ class RayAgentTrainer(VerlRayPPOTrainer):
 
         return batch
 
-    def get_gradient_analysis_batch_and_filter(self, batch, metrics):
-        analysis_batch = self._build_separate_gradient_analysis_batch(metrics)
+    def _build_separate_gradient_analysis_batches(self, metrics):
+        if self.gradient_analysis_proxy is None or self.gradient_analysis_rollout_filter is None:
+            return None, None
+
+        analysis_env_groups = int(self.gradient_analysis_config.es_manager.train.env_groups)
+        analysis_group_size = int(self.gradient_analysis_config.es_manager.train.group_size)
+        metrics["grad_analysis/source_env_groups"] = analysis_env_groups
+        metrics["grad_analysis/source_group_size"] = analysis_group_size
+
+        batch = DataProto()
+        batch.meta_info = {"compute_collapse": False}
+        batch = self.gradient_analysis_proxy.rollout(batch, val=False)
+        raw_batch_size = batch.batch["input_ids"].shape[0]
+        metrics["grad_analysis/source_batch_size"] = raw_batch_size
+
+        prefilter_source_batch = None
+        if self.config.trainer.get("gradient_analysis_log_prefilter", False):
+            prefilter_source_batch = deepcopy(batch)
+            metrics["grad_analysis_prefilter/source_batch_size"] = raw_batch_size
+
+        batch, filter_metrics = self.gradient_analysis_rollout_filter.filter(batch)
+        metrics["grad_analysis/empty_after_filter"] = float(len(batch) == 0)
+        for key, value in filter_metrics.items():
+            if key.startswith("rollout/_"):
+                continue
+            metrics[f"grad_analysis/{key.split('/', 1)[-1]}"] = value
+
+        prefilter_batch = None
+        if prefilter_source_batch is not None:
+            group_reward_std = filter_metrics.get("rollout/_group_reward_std", None)
+            group_ids_for_metrics = filter_metrics.get("rollout/_group_ids", None)
+            self._attach_group_reward_std(prefilter_source_batch, group_reward_std, group_ids_for_metrics)
+            prefilter_batch = self._prepare_gradient_analysis_batch(
+                prefilter_source_batch,
+                source_env_groups=analysis_env_groups,
+                metrics=metrics,
+                metrics_prefix="grad_analysis_prefilter",
+            )
+
+        if len(batch) == 0:
+            return batch, prefilter_batch
+
+        filter_kept_ratio = filter_metrics.get("rollout/filter_kept_ratio", None)
+        if filter_kept_ratio is not None:
+            batch.meta_info = dict(batch.meta_info or {})
+            batch.meta_info["filter_kept_ratio"] = float(self._to_python_scalar(filter_kept_ratio))
+
+        batch = self._prepare_gradient_analysis_batch(
+            batch,
+            source_env_groups=analysis_env_groups,
+            metrics=metrics,
+            metrics_prefix="grad_analysis",
+        )
+        return batch, prefilter_batch
+
+    def get_gradient_analysis_batches(self, batch, metrics):
+        analysis_batch, prefilter_batch = self._build_separate_gradient_analysis_batches(metrics)
         if analysis_batch is None:
             metrics["grad_analysis/uses_training_batch"] = 1.0
-            return batch, self.rollout_filter
+            return batch, None, self.rollout_filter
 
         metrics["grad_analysis/uses_training_batch"] = 0.0
-        return analysis_batch, self.gradient_analysis_rollout_filter
+        return analysis_batch, prefilter_batch, self.gradient_analysis_rollout_filter
+
+    def get_gradient_analysis_batch_and_filter(self, batch, metrics):
+        analysis_batch, _, analysis_rollout_filter = self.get_gradient_analysis_batches(batch, metrics)
+        return analysis_batch, analysis_rollout_filter
 
 
     def _save_checkpoint(self):
@@ -888,8 +980,16 @@ class RayAgentTrainer(VerlRayPPOTrainer):
         # add tqdm
         progress_bar = tqdm(total=self.total_training_steps, initial=self.global_steps, desc="Training Progress")
 
-        # we start from step 1
-        self.global_steps += 1
+        # For a resume-based gradient-analysis-only probe, keep the checkpoint
+        # step number in logs instead of advancing to a synthetic next step.
+        analysis_probe_from_resume = bool(
+            self.config.trainer.get("gradient_analysis_only", False) and self.global_steps > 0
+        )
+        if not analysis_probe_from_resume:
+            # we start from step 1
+            self.global_steps += 1
+        else:
+            print(f"[Gradient Analysis] Probing resumed checkpoint at step {self.global_steps}")
         last_val_metrics = None
 
         def _process_batch_for_logging(batch):
@@ -1056,6 +1156,23 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                             f"[Warning] No samples kept after filtering for this step. "
                             f"Consecutive empty steps: {self.consecutive_empty_filtered_steps}."
                         )
+
+                    gradient_analysis_every = self.config.trainer.get("gradient_analysis_every", 0)
+                    gradient_analysis_only = bool(self.config.trainer.get("gradient_analysis_only", False))
+                    if (
+                        gradient_analysis_only
+                        and self.config.trainer.get("gradient_analysis_mode", False)
+                        and gradient_analysis_every > 0
+                        and (self.global_steps - 1) % gradient_analysis_every == 0
+                    ):
+                        print(
+                            "[Gradient Analysis] Main training batch is empty after filtering; "
+                            "falling back to separate analysis batch."
+                        )
+                        with marked_timer("gradient_analysis", timing_raw):
+                            run_gradient_analysis(self, batch, metrics)
+                        if self.config.trainer.get("exit_after_gradient_analysis", False):
+                            metrics["trainer/exited_after_gradient_analysis"] = 1.0
 
                     logger.log(data=metrics, step=self.global_steps)
 
@@ -1302,12 +1419,17 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                 if self.config.algorithm.get("zero_task_advantage", False):
                     batch.batch["advantages"] = torch.zeros_like(batch.batch["advantages"])
 
+                gradient_analysis_only = bool(self.config.trainer.get("gradient_analysis_only", False))
+                metrics["trainer/gradient_analysis_only"] = float(gradient_analysis_only)
+
                 # update critic
-                if self.use_critic:
+                if self.use_critic and not gradient_analysis_only:
                     with marked_timer("update_critic", timing_raw, color="pink"):
                         critic_output = self.critic_wg.update_critic(batch)
                     critic_output_metrics = reduce_metrics(critic_output.meta_info["metrics"])
                     metrics.update(critic_output_metrics)
+                elif self.use_critic and gradient_analysis_only:
+                    metrics["critic/skipped_for_gradient_analysis_only"] = 1.0
 
                 # implement critic warmup
                 if self.config.trainer.critic_warmup <= self.global_steps:
@@ -1324,11 +1446,14 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                                 return
 
                     # update actor
-                    with marked_timer("update_actor", timing_raw):
-                        batch.meta_info["multi_turn"] = True
-                        actor_output = self.actor_rollout_wg.update_actor(batch)
-                        actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
-                        metrics.update(actor_output_metrics)
+                    if not gradient_analysis_only:
+                        with marked_timer("update_actor", timing_raw):
+                            batch.meta_info["multi_turn"] = True
+                            actor_output = self.actor_rollout_wg.update_actor(batch)
+                            actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
+                            metrics.update(actor_output_metrics)
+                    else:
+                        metrics["actor/skipped_for_gradient_analysis_only"] = 1.0
 
                 # Log rollout generations if enabled
                 rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)

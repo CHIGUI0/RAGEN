@@ -2,7 +2,7 @@
 
 This doc covers the helper scripts for the Sokoban top-p=0.9 gradient-analysis experiments.
 
-For the internal execution order, metric definitions, and plotting workflow, see [gradient_analysis_walkthrough.md](gradient_analysis_walkthrough.md).
+For the internal execution order, metric definitions, and plotting workflow, see [guide_gradient_analysis.md](guide_gradient_analysis.md).
 
 ## Scripts Overview
 
@@ -151,4 +151,4 @@ Outputs:
 - Directory relationship:
   - the training helper writes checkpoints under `model_saving/gradient_analysis/...`
   - the probe helper reads from that layout by default and writes its own outputs under `model_saving/gradient_analysis_probe/...`
-- If you need the meaning of bucket metrics, prefilter logging, or the plotting commands after the run finishes, use [gradient_analysis_walkthrough.md](gradient_analysis_walkthrough.md).
+- If you need the meaning of bucket metrics, prefilter logging, or the plotting commands after the run finishes, use [guide_gradient_analysis.md](guide_gradient_analysis.md).

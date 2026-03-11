@@ -3,7 +3,7 @@
 ## Overview
 This document details the advanced filtering strategies and the loss scaling mechanism implemented to stabilize Reinforcement Learning (RL) training, particularly when using aggressive filtering techniques in the GRPO/PPO loop.
 
-Note: the short guide for the current `top_p`, `top_k`, and no-filter variants lives in [docs/rollout_filtering.md](./rollout_filtering.md).
+Note: the short guide for the current `top_p`, `top_k`, and no-filter variants lives in [guide_rollout_filtering.md](./guide_rollout_filtering.md).
 
 ## 1. Rolling Filter Strategies (`rollout_filter_strategy`)
 We have implemented three strategies to filter rollout groups based on their rewards/scores.
@@ -122,12 +122,12 @@ To prevent wasting compute on environments where the model is failing to learn, 
 
 ---
 
-A unified script `run_filtering_final.sh` is provided to run the validated set of filtering experiments.
+A unified script `scripts/runs/run_filtering_final.sh` is provided to run the validated set of filtering experiments.
 
 ### Usage
 ```bash
 # Run experiments across available GPUs (e.g., 2 GPUs per experiment)
-bash run_filtering_final.sh 2
+bash scripts/runs/run_filtering_final.sh 2
 ```
 
 ### Features
@@ -136,18 +136,6 @@ bash run_filtering_final.sh 2
 -   **Auto-Scheduling**: Automatically detects available GPUs and distributes experiments.
 -   **Metric Coverage**: Covers `reward_variance`, `entropy`, `entropy_variance`, and `length`.
 -   **Automatic Skip**: Tracks progress in `filter_final_donelist.txt` to avoid redundant runs.
-
----
-
-## 5. Legacy Scripts
-The following scripts were used during the initial exploration phase:
-- `run_filtering_exps.sh`: Initial algorithm comparison (GRPO vs PPO).
-- `run_filtering_multigpu.sh`: Batch execution with comma-separated arguments.
-- `run_filtering_pergpu.sh`: Parallel execution on individual GPUs.
-
-### Directory Structure
-Results are saved to `results/` with subdirectories named after the experiment:
-`results/[DATE]_soko_3b_[ALGO]_[STRATEGY]_[VALUE]_inc[TRUE/FALSE]/`
 
 ---
 

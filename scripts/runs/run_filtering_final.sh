@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# usage: bash run_filtering_final.sh [gpus_per_exp]
+# usage: bash scripts/runs/run_filtering_final.sh [gpus_per_exp]
 GPUS_PER_EXP="${1:-2}" 
 
 # -----------------------

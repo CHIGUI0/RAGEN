@@ -147,4 +147,4 @@ How to choose `rollout_filter_value`:
 
 - filter logic: [ragen/trainer/rollout_filter.py](../ragen/trainer/rollout_filter.py)
 - trainer handling for empty filtered steps: [ragen/trainer/agent_trainer.py](../ragen/trainer/agent_trainer.py)
-- validated Top-k experiment settings: [run_filtering_final.sh](../run_filtering_final.sh)
+- validated Top-k experiment settings: [run_filtering_final.sh](../scripts/runs/run_filtering_final.sh)

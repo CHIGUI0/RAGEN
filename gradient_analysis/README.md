@@ -4,19 +4,19 @@ This folder contains the plotting utilities for the gradient-analysis workflow.
 
 There are two plotting entry points:
 
-1. [plot_gradient_analysis.py](/Users/deimos/Desktop/ICML/RAGEN/plot_gradient_analysis.py)
+1. [plot_gradient_analysis.py](./plot_gradient_analysis.py)
 - pulls one W&B run directly
 - exports local `json` / `csv`
 - writes per-step PNG plots
 
-2. [plot_icml_steps.py](/Users/deimos/Desktop/ICML/RAGEN/gradient_analysis/plot_icml_steps.py)
+2. [plot_icml_steps.py](./plot_icml_steps.py)
 - builds a fixed 3-step comparison figure from already-exported `metrics.json` files
 - intended for paper-style summary figures
 
 For the training-side workflow and arguments, see:
-- [docs/gradient_analysis_walkthrough.md](/Users/deimos/Desktop/ICML/RAGEN/docs/gradient_analysis_walkthrough.md)
+- [docs/guide_gradient_analysis.md](../docs/guide_gradient_analysis.md)
 
-Current default training behavior from [config/base.yaml](/Users/deimos/Desktop/ICML/RAGEN/config/base.yaml):
+Current default training behavior from [config/base.yaml](../config/base.yaml):
 - `trainer.gradient_analysis_mode=True`
 - `trainer.gradient_analysis_every=50`
 - `trainer.gradient_analysis_env_groups=null`
@@ -44,7 +44,7 @@ That job:
 ### 2. List available analysis steps in W&B
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id> \
   --list-steps
 ```
@@ -52,7 +52,7 @@ python plot_gradient_analysis.py \
 ### 3. Plot all analysis steps from that run
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id>
 ```
 
@@ -65,7 +65,7 @@ gradient_analysis_outputs/<run_name>_<run_id>/
 ### 4. Plot only one step
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id> \
   --step 1
 ```
@@ -73,13 +73,13 @@ python plot_gradient_analysis.py \
 ### 5. Choose your own output directory
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id> \
   --step 1 \
   --output-dir gradient_analysis_outputs/my_custom_dir
 ```
 
-## Files Produced By `plot_gradient_analysis.py`
+## Files Produced By `gradient_analysis/plot_gradient_analysis.py`
 
 For each selected step, the script writes:
 

@@ -37,7 +37,7 @@ Then set:
 ### Plot the finished run
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id> \
   --step 1
 ```
@@ -52,7 +52,7 @@ gradient_analysis_outputs/<run_name>_<run_id>/
 
 Gradient analysis is a reporting path that probes the actor on reward-variance buckets without taking an optimizer step.
 
-The current execution order inside [agent_trainer.py](/Users/deimos/Desktop/ICML/RAGEN/ragen/trainer/agent_trainer.py) is:
+The current execution order inside [agent_trainer.py](../ragen/trainer/agent_trainer.py) is:
 
 1. generate rollouts
 2. apply rollout filtering
@@ -77,7 +77,7 @@ When `trainer.gradient_analysis_env_groups` or `trainer.gradient_analysis_group_
 
 ## How Bucketing Works
 
-Bucketing is implemented in [rollout_filter.py](/Users/deimos/Desktop/ICML/RAGEN/ragen/trainer/rollout_filter.py).
+Bucketing is implemented in [rollout_filter.py](../ragen/trainer/rollout_filter.py).
 
 ### Source Signal
 
@@ -124,7 +124,7 @@ If a bucket size is not divisible by `trainer.n_gpus_per_node`, the reporter dro
 
 ## How The Analysis Is Computed
 
-The reporting loop is in [gradient_reporter.py](/Users/deimos/Desktop/ICML/RAGEN/ragen/trainer/gradient_reporter.py).
+The reporting loop is in [gradient_reporter.py](../ragen/trainer/gradient_reporter.py).
 
 For each bucket:
 
@@ -140,7 +140,7 @@ For each bucket:
 5. record gradient norms and losses
 6. zero gradients and move to the next bucket
 
-The component-wise backward path is implemented in [dp_actor.py](/Users/deimos/Desktop/ICML/RAGEN/ragen/workers/actor/dp_actor.py).
+The component-wise backward path is implemented in [dp_actor.py](../ragen/workers/actor/dp_actor.py).
 
 Important detail:
 - this path does not call `optimizer.step()`
@@ -301,7 +301,7 @@ If `exit_after_gradient_analysis=True`, the trainer also logs:
 ### 1. From Scratch With The Helper Script
 
 The helper runner is:
-- [run_sokoban_ppo_filter_grad_analysis.sh](/Users/deimos/Desktop/ICML/RAGEN/scripts/runs/run_sokoban_ppo_filter_grad_analysis.sh)
+- [run_sokoban_ppo_filter_grad_analysis.sh](../scripts/runs/run_sokoban_ppo_filter_grad_analysis.sh)
 
 It is fixed to:
 - task: `sokoban`
@@ -412,14 +412,14 @@ Why `total_training_steps=101` for a `global_step_100` checkpoint:
 ## Plotting After The Run
 
 The plotting entry point is:
-- [plot_gradient_analysis.py](/Users/deimos/Desktop/ICML/RAGEN/plot_gradient_analysis.py)
+- [plot_gradient_analysis.py](../gradient_analysis/plot_gradient_analysis.py)
 
 ### List Available Analysis Steps
 
 Before plotting, you can ask the script which steps in the run actually contain bucket metrics:
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id> \
   --list-steps
 ```
@@ -427,14 +427,14 @@ python plot_gradient_analysis.py \
 ### Plot All Available Analysis Steps
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id>
 ```
 
 ### Plot A Specific Step
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id> \
   --step 1
 ```
@@ -442,7 +442,7 @@ python plot_gradient_analysis.py \
 You can also request multiple steps:
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id> \
   --step 1 11 21
 ```
@@ -450,7 +450,7 @@ python plot_gradient_analysis.py \
 ### Choose An Output Directory
 
 ```bash
-python plot_gradient_analysis.py \
+python gradient_analysis/plot_gradient_analysis.py \
   --wandb-path deimos-xing/ragen_gradient_analysis/<run_id> \
   --step 1 \
   --output-dir gradient_analysis_outputs/my_run_step1
@@ -488,4 +488,4 @@ python gradient_analysis/plot_icml_steps.py \
 ```
 
 The plotting-only README is here:
-- [gradient_analysis/README.md](/Users/deimos/Desktop/ICML/RAGEN/gradient_analysis/README.md)
+- [gradient_analysis/README.md](../gradient_analysis/README.md)

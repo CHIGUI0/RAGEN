@@ -50,11 +50,11 @@ def main():
         description="Plot gradient-analysis metrics from a W&B run.",
         epilog=(
             "Examples:\n"
-            "  python plot_gradient_analysis.py --wandb-path entity/project/run_id\n"
-            "  python plot_gradient_analysis.py --wandb-path entity/project/run_id --step 1\n"
-            "  python plot_gradient_analysis.py --wandb-path entity/project/run_id "
+            "  python gradient_analysis/plot_gradient_analysis.py --wandb-path entity/project/run_id\n"
+            "  python gradient_analysis/plot_gradient_analysis.py --wandb-path entity/project/run_id --step 1\n"
+            "  python gradient_analysis/plot_gradient_analysis.py --wandb-path entity/project/run_id "
             "--output-dir gradient_analysis_outputs/my_run\n"
-            "  python plot_gradient_analysis.py --wandb-path entity/project/run_id --list-steps"
+            "  python gradient_analysis/plot_gradient_analysis.py --wandb-path entity/project/run_id --list-steps"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )

@@ -1,3 +1,8 @@
+# Based on code from:
+# https://github.com/rllm-org/rllm/tree/main/examples/deepcoder
+#
+# This file has been modified from the original implementation
+# to fit the DeepCoder environment used in this project.
 import json
 import random
 from typing import Any, Dict, Optional, Tuple

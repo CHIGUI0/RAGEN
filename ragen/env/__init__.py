@@ -14,6 +14,10 @@ from .sudoku.config import SudokuEnvConfig
 from .sudoku.env import SudokuEnv
 from .deepcoder.config import DeepCoderEnvConfig
 from .deepcoder.env import DeepCoderEnv
+from .game_2048.config import Game2048EnvConfig
+from .game_2048.env import Game2048Env
+from .rubikscube.config import RubiksCube2x2Config
+from .rubikscube.env import RubiksCube2x2Env
 
 
 REGISTERED_ENVS = {
@@ -25,6 +29,8 @@ REGISTERED_ENVS = {
     'lean': LeanEnv,
     'deepcoder': DeepCoderEnv,
     'sudoku': SudokuEnv,
+    'game_2048': Game2048Env,
+    'rubikscube': RubiksCube2x2Env,
 }
 
 REGISTERED_ENV_CONFIGS = {
@@ -36,6 +42,8 @@ REGISTERED_ENV_CONFIGS = {
     'deepcoder': DeepCoderEnvConfig,
     'lean': LeanEnvConfig,
     'sudoku': SudokuEnvConfig,
+    'game_2048': Game2048EnvConfig,   
+    'rubikscube': RubiksCube2x2Config,
 }
 
 try:

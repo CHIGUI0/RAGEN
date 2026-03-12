@@ -106,7 +106,7 @@ else
 fi
 
 # Fixed: search task config
-CONFIG="_10_search"
+CONFIG="_9_search"
 
 # Map model names to HuggingFace paths
 get_model_path() {

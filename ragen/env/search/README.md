@@ -92,7 +92,7 @@ Key training parameters (pass via `run_search_benchmark.sh` flags):
 
 ## Config
 
-The search environment config is at `config/_10_search.yaml`. Key settings:
+The search environment config is at `config/_9_search.yaml`. Key settings:
 
 ```yaml
 micro_batch_size_per_gpu: 4

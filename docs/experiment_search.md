@@ -8,7 +8,7 @@ All experiments use:
 - **Task**: SearchQA (HotpotQA multi-hop QA with Wikipedia dense retrieval)
 - **Model**: `Qwen/Qwen2.5-3B-Instruct`
 - **Algorithm**: PPO (`algorithm.adv_estimator=gae`)
-- **Config**: `_10_search`
+- **Config**: `_9_search`
 
 The sweep compares three rollout filtering strategies while keeping all other hyperparameters fixed.
 
@@ -115,7 +115,7 @@ Project: [`cuhksz-gc/ragen_search_benchmark`](https://wandb.ai/cuhksz-gc/ragen_s
 ## Shared Config
 
 ```yaml
-# config/_10_search.yaml overrides
+# config/_9_search.yaml overrides
 micro_batch_size_per_gpu: 4
 ppo_mini_batch_size: 32-64  # depends on filter setting
 
@@ -159,5 +159,5 @@ trainer:
 
 - **Retrieval server GPU deployment**: Place the E5 retrieval server on a **dedicated GPU** not used by training. Co-locating with training on the same GPU causes CUDA OOM due to memory contention between vLLM, training, and the E5 server process. Do not use CPU mode — during rollout, hundreds of environments issue concurrent retrieval requests (256 env groups can produce 1000+ requests), and CPU cannot keep up.
 - **mini-batch size adjustment**: When using aggressive filtering (e.g., `top_k=0.25`), reduce `ppo_mini_batch_size` so it does not exceed `env_groups * group_size * filter_value`. Otherwise training fails with an assertion error.
-- **max_model_len**: Default is 5000 (in `_10_search.yaml`). The TopK=0.25 experiment used 4000 to save KV cache memory; the No Filter and TopP=0.9 experiments use the default 5000.
+- **max_model_len**: Default is 5000 (in `_9_search.yaml`). The TopK=0.25 experiment used 4000 to save KV cache memory; the No Filter and TopP=0.9 experiments use the default 5000.
 - **Checkpoint size**: Each checkpoint is ~35GB (model + optimizer, 8 FSDP shards). With `save_freq=20` and 200 steps, expect 10 checkpoints (~350GB). Monitor disk usage and delete old checkpoints as needed.

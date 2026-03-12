@@ -1,20 +1,46 @@
-# Rollout Filtering Short Guide
+# Rollout Filtering Guide
 
-This note only covers the four common settings used in current RAGEN runs.
+## What is Rollout Filtering?
 
-Relevant config keys live under `actor_rollout_ref.rollout` in [config/base.yaml](../config/base.yaml).
+In RAGEN, each training step generates multiple rollouts per prompt (a **group**). The within-group **reward variance (RV)** measures how much the model's responses differ in quality for that prompt:
+
+- **High RV** — the model sometimes succeeds and sometimes fails → strong learning signal
+- **Low RV** — all responses receive similar rewards → noisy gradient (low SNR)
+
+**SNR-Adaptive Filtering** discards low-variance groups before the policy gradient update, keeping only prompts that provide meaningful signal. This reduces gradient noise and mitigates reasoning collapse during training.
+
+<p align="center"><img src="../public/top_p.png" width="800px" alt="SNR-Adaptive Filtering (Top-p) pipeline" /></p>
+<p align="center"><em>Top-p filtering pipeline: (1) sample rollouts and compute rewards, (2) compute within-prompt reward variance, (3) rank by RV and apply Top-p threshold — low-variance prompts are discarded.</em></p>
+
+All config keys live under `actor_rollout_ref.rollout` in [config/base.yaml](../config/base.yaml).
 
 ## Quick Recommendation
 
-- want no filtering: `top_p=1.0`, `include_zero=True`
-- want the old top-p behavior: `top_p_prob_mode=softmax`, `include_zero=False`, start with `top_p=0.9`
-- want the new stricter RV filter: `top_p_prob_mode=linear`, `include_zero=False`, start with `top_p=0.9`, `eps=0.01`
-- want the new Top-k setup: `strategy=top_k`, `value=0.25`, `type=largest`, `include_zero=True`
+| Goal | Config |
+|---|---|
+| No filtering (default) | `rollout_filter_value=1.0`, `rollout_filter_include_zero=True` |
+| **Top-p Linear (recommended)** | `rollout_filter_value=0.9`, `rollout_filter_top_p_prob_mode=linear`, `rollout_filter_include_zero=False`, `rollout_filter_selection_eps=0.01` |
+| Top-p Softmax | `rollout_filter_value=0.9`, `rollout_filter_top_p_prob_mode=softmax`, `rollout_filter_include_zero=False` |
+| Top-k Fractional | `rollout_filter_strategy=top_k`, `rollout_filter_value=0.25`, `rollout_filter_type=largest`, `rollout_filter_include_zero=True` |
 
+## Config Parameters
 
-## 1. No Filter
+| Parameter | Description |
+|---|---|
+| `rollout_filter_strategy` | Selection strategy: `top_p`, `top_k`, `top_k_abs`, `min_p` |
+| `rollout_filter_value` | Threshold value — meaning depends on strategy (see below) |
+| `rollout_filter_type` | `largest` (keep high-RV groups) or `smallest` (keep low-RV groups) |
+| `rollout_filter_include_zero` | Whether to keep groups with zero reward variance |
+| `rollout_filter_top_p_prob_mode` | Top-p score aggregation: `linear` (score-sum rule) or `softmax` (probability mass) |
+| `rollout_filter_selection_eps` | Epsilon for the linear top-p threshold (default `0.01`) |
+| `rollout_filter_metric` | What to compute per group: `reward_variance` (default), `reward`, `reward_sum`, `entropy`, `entropy_variance`, `length` |
+| `rollout_filter_empty_stop_steps` | Early-stop after this many consecutive steps with 0 kept samples (default `5`) |
 
-Use this when you want true no-filter behavior.
+## Filtering Strategies
+
+### 1. No Filter
+
+Keep all groups. Use this as a baseline.
 
 ```yaml
 actor_rollout_ref:
@@ -24,47 +50,11 @@ actor_rollout_ref:
     rollout_filter_include_zero: True
 ```
 
-Notes:
+With `value=1.0` and `include_zero=True`, the filter is effectively disabled — all groups pass through.
 
-- `include_zero=True` is the important part.
-- With `top_p=1.0`, the filter keeps all groups.
-- In this setting, `rollout_filter_top_p_prob_mode` does not matter.
-- If you want guaranteed no filtering, prefer this setting over `top_k`.
+### 2. Top-p Linear (Recommended)
 
-## 2. Top-p Softmax
-
-Use this when you want the old behavior.
-
-```yaml
-actor_rollout_ref:
-  rollout:
-    rollout_filter_strategy: top_p
-    rollout_filter_value: 0.9
-    rollout_filter_top_p_prob_mode: softmax
-    rollout_filter_include_zero: False
-```
-
-Behavior:
-
-- zero-score groups are removed first because `include_zero=False`
-- remaining group scores are turned into
-
-```text
-probs = softmax(scores)
-```
-
-- the filter keeps the smallest prefix whose cumulative probability mass reaches `top_p`
-
-How to choose `rollout_filter_value`:
-
-- `0.9`: recommended default
-- `0.95` to `0.98`: mild filtering
-- `0.6` to `0.8`: aggressive filtering
-- lower `top_p` means fewer groups kept
-
-## 3. Top-p Linear
-
-Use this when you want the new stricter RV-mass rule.
+Keep the highest-RV groups whose cumulative score reaches a fraction of the total score.
 
 ```yaml
 actor_rollout_ref:
@@ -76,30 +66,44 @@ actor_rollout_ref:
     rollout_filter_selection_eps: 0.01
 ```
 
-Behavior:
+How it works:
+1. Remove zero-RV groups (`include_zero=False`)
+2. Sort remaining groups by score (descending)
+3. Compute threshold: `top_p * sum(scores) - eps`
+4. Accumulate scores from the top until the threshold is reached
+5. If the threshold cannot be reached, the step is skipped (`empty_after_filter`)
 
-- zero-score groups are removed first because `include_zero=False`
-- scores are sorted from large to small
-- threshold is computed as
+Tuning:
+- `value=0.9`: recommended default
+- Lower `value` → more aggressive filtering (fewer groups kept)
+- `eps=0.01`: recommended default; larger eps rejects near-zero-RV batches more easily
 
-```text
-threshold = top_p * sum(scores) - eps
+### 3. Top-p Softmax
+
+Nucleus-style selection based on softmax probability mass over group scores.
+
+```yaml
+actor_rollout_ref:
+  rollout:
+    rollout_filter_strategy: top_p
+    rollout_filter_value: 0.9
+    rollout_filter_top_p_prob_mode: softmax
+    rollout_filter_include_zero: False
 ```
 
-- scores are accumulated from the front until the threshold is reached
-- if the threshold cannot be reached, the step becomes `empty_after_filter`
+How it works:
+1. Remove zero-RV groups (`include_zero=False`)
+2. Convert scores to probabilities: `probs = softmax(scores)`
+3. Sort by probability (descending) and accumulate until cumulative mass reaches `top_p`
 
-How to choose the variables:
+Tuning:
+- `value=0.9`: recommended default
+- `0.95–0.98`: mild filtering
+- `0.6–0.8`: aggressive filtering
 
-- `rollout_filter_value=0.9`: recommended default
-- smaller `top_p`: more aggressive filtering
-- `rollout_filter_selection_eps=0.01`: recommended default
-- smaller `eps`: less aggressive emptying
-- larger `eps`: easier to reject near-zero-RV batches
+### 4. Top-k Fractional
 
-## 4. Top-k Fractional
-
-Use this when you want to keep a fixed fraction of groups.
+Keep a fixed fraction of groups ranked by score.
 
 ```yaml
 actor_rollout_ref:
@@ -110,42 +114,17 @@ actor_rollout_ref:
     rollout_filter_include_zero: True
 ```
 
-Behavior:
+How it works:
+1. Compute `k = int(value * num_groups)` (at least 1)
+2. Keep the top-k groups by score
+3. With `include_zero=True`, zero-RV groups remain as candidates
 
-- with `include_zero=True`, zero-score groups stay in the candidate set
-- the code computes
+`value=0.25` means "keep about 25% of groups". Example: with 8 groups, keeps `int(0.25 * 8) = 2` groups.
 
-```text
-k = int(top_k * num_groups)
-k = min(k, num_candidate_groups)
-k = max(k, 1)
-```
-
-- `num_groups` is the total group count for the current batch
-- with `include_zero=True`, `num_candidate_groups = num_groups`
-- `largest` keeps the highest-score groups
-- `smallest` keeps the lowest-score groups
-- zero-score groups can still be selected if they fall inside the top-`k` ranking
-
-What `top_k=0.25` means:
-
-- it is a fraction, not an absolute count
-- equivalently, it means "keep about 25% of the groups"
-- example: with `num_groups=8`, it keeps `int(0.25 * 8) = 2` groups
-- example: with `num_groups=7`, it keeps `int(0.25 * 7) = 1` group
-- because the code uses `int(...)`, this is floor rounding, so small batches can be a bit more aggressive than the nominal ratio
-- if you want a fixed absolute count instead, use `top_k_abs`
-
-How to choose `rollout_filter_value`:
-
-- `0.25`: recommended setting for the current Top-k runs
-- `0.5`: milder filtering
-- smaller values: more aggressive filtering
-- use `largest` for the standard "keep best groups" setup
-- use `smallest` only when you intentionally want the reverse selection
+For a fixed absolute count instead of a fraction, use `strategy=top_k_abs`.
 
 ## Code References
 
-- filter logic: [ragen/trainer/rollout_filter.py](../ragen/trainer/rollout_filter.py)
-- trainer handling for empty filtered steps: [ragen/trainer/agent_trainer.py](../ragen/trainer/agent_trainer.py)
-- validated Top-k experiment settings: [run_filtering_final.sh](../scripts/runs/run_filtering_final.sh)
+- Filter logic: [ragen/trainer/rollout_filter.py](../ragen/trainer/rollout_filter.py)
+- Trainer integration: [ragen/trainer/agent_trainer.py](../ragen/trainer/agent_trainer.py)
+- Experiment scripts: [scripts/runs/run_filtering_final.sh](../scripts/runs/run_filtering_final.sh)
